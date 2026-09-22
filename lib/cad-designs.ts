@@ -6,6 +6,7 @@
 import geminiTags from "@/data/gemini_tags.json";
 import luxeCad from "@/data/luxe_CAD.json";
 import { type CadDataset } from "@/lib/cad-constants";
+import { groupMatchingSets } from "@/lib/matching-set";
 
 export { CAD_CATEGORIES, type CadCategory, type CadDataset, CAD_DATASET_LABEL } from "@/lib/cad-constants";
 
@@ -152,4 +153,28 @@ export function searchCadDesigns(opts: {
     const results = groups.map((phrases) => phrases.some((p) => tagsMatchTerm(design.tags, p)));
     return opts.mode === "OR" ? results.some(Boolean) : results.every(Boolean);
   });
+}
+
+// ---------------------------------------------------------------------
+// Matching sets (Luxe library, "Necklace Set" collection only)
+// ---------------------------------------------------------------------
+//
+// Within that one collection, a necklace ("NS-<code>") and its matching
+// earring ("NE-<code>") share the exact same suffix after the type letters
+// — e.g. NS-0049 / NE-0049, and NS-0049-B / NE-0049-B for a color variant.
+// This is NOT true anywhere else in the library: the same numeric suffix
+// recurs across nearly every other category (Ring, Bracelet, Pendant, ...)
+// purely because they share one sequential counter, so a Ring and an
+// Earring with the same number are unrelated designs. Verified against
+// tags and images before relying on it — see conversation.
+export type MatchingSet = {
+  setCode: string; // the shared suffix, e.g. "0049" or "0049-B"
+  necklace: CadDesign;
+  earring: CadDesign;
+};
+
+export function getMatchingSets(): MatchingSet[] {
+  const designs = getAllCadDesigns("luxe").filter((d) => d.collection === "Necklace Set");
+  const { pairs } = groupMatchingSets(designs, (d) => ({ code: d.code, dataset: d.dataset }));
+  return pairs;
 }

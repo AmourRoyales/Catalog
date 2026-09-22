@@ -18,15 +18,22 @@ export default async function PublicCadCatalogPage({ params }: { params: { code:
     );
   }
 
+  // When the catalog owner turned pricing off, don't even fetch `prices` —
+  // the viewer already hides it, but that alone would still ship the full
+  // computed price (and its cost breakdown) in the page's source for
+  // anyone who opens dev tools. Not stripping it defeats "no pricing" for
+  // a link shared directly with a customer.
+  const projection: Record<string, 1> = {
+    design_id: 1, dataset: 1, design_code: 1, design_type: 1, cad_url: 1, display_order: 1,
+  };
+  if (catalog.show_price) projection.prices = 1;
+
   const docs = await db
     .collection("cad_catalog_items")
-    .find(
-      { catalog_id: catalog._id },
-      { projection: { design_id: 1, dataset: 1, design_code: 1, design_type: 1, cad_url: 1, display_order: 1, prices: 1 } }
-    )
+    .find({ catalog_id: catalog._id }, { projection })
     .sort({ display_order: 1 })
     .toArray();
-  const items = docs.map(({ _id, ...it }) => it) as any[];
+  const items = docs.map(({ _id, prices, ...it }) => ({ ...it, prices: prices ?? {} })) as any[];
 
   return (
     <CadCatalogViewer
