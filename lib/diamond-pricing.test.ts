@@ -56,7 +56,7 @@ describe("color adjustment (H clarity=VS2, cost=$1000 so base=20%, no clamp)", (
   });
 });
 
-describe("clarity adjustment (H color, cost=$1000 so base=20%, no clamp)", () => {
+describe("clarity adjustment (H color, cost=$400 so base=30%, no clamp)", () => {
   it.each([
     ["FL", 8],
     ["IF", 6],
@@ -71,33 +71,33 @@ describe("clarity adjustment (H color, cost=$1000 so base=20%, no clamp)", () =>
     ["I2", -3],
     ["I3", -3],
   ])("clarity %s -> %s pts", (clarity, expectedAdjustment) => {
-    const p = priceLabGrownDiamond({ landedCost: 1000, color: "H", clarity, carat: 1 });
+    const p = priceLabGrownDiamond({ landedCost: 400, color: "H", clarity, carat: 1 });
     expect(p.clarityAdjustmentPercent).toBe(expectedAdjustment);
-    expect(p.finalMarkupPercent).toBe(20 + expectedAdjustment);
+    expect(p.finalMarkupPercent).toBe(30 + expectedAdjustment);
   });
 });
 
-describe("large-stone adjustment (H/VS2, cost=$1000 so base=20%, no clamp)", () => {
+describe("large-stone adjustment (H/VS2, cost=$400 so base=30%, no clamp)", () => {
   it.each([
     [1.99, 0],
-    [2.0, -2],
-    [2.99, -2],
-    [3.0, -4],
-    [4.99, -4],
-    [5.0, -5],
-    [10, -5],
+    [2.0, -1],
+    [2.99, -1],
+    [3.0, -2],
+    [4.99, -2],
+    [5.0, -3],
+    [10, -3],
   ])("%sct -> %s pts", (carat, expectedAdjustment) => {
-    const p = priceLabGrownDiamond({ landedCost: 1000, color: "H", clarity: "VS2", carat });
+    const p = priceLabGrownDiamond({ landedCost: 400, color: "H", clarity: "VS2", carat });
     expect(p.largeStoneAdjustmentPercent).toBe(expectedAdjustment);
-    expect(p.finalMarkupPercent).toBe(20 + expectedAdjustment);
+    expect(p.finalMarkupPercent).toBe(30 + expectedAdjustment);
   });
 });
 
 describe("markup floor and cap", () => {
-  it("clamps down to the 12% floor when adjustments would push it lower", () => {
-    // base 15% (cost>=2000) + I(-1) + SI2 or lower(-3) + 5ct+(-5) = 6%, well under the floor.
+  it("clamps down to the 18% floor when adjustments would push it lower", () => {
+    // base 15% (cost>=2000) + I(-1) + SI2 or lower(-3) + 5ct+(-3) = 8%, well under the floor.
     const p = priceLabGrownDiamond({ landedCost: 5000, color: "I", clarity: "I3", carat: 6 });
-    expect(p.rawMarkupPercent).toBe(6);
+    expect(p.rawMarkupPercent).toBe(8);
     expect(p.finalMarkupPercent).toBe(PRICING_PROFILE.markupFloorPercent);
   });
 
@@ -151,14 +151,16 @@ describe("rounding", () => {
   });
 
   it("rounds to the nearest $10 at $1,000 and above", () => {
-    // cost=$2000 (15% base, carat<2 so no large-stone adjustment) -> 2300 -> already a multiple of 10.
+    // cost=$2000: 15% base (cost>=2000, carat<2 so no large-stone adjustment)
+    // is under the 18% floor, so it clamps to 18% -> 2360 -> already a multiple of 10.
     const p = priceLabGrownDiamond({ landedCost: 2000, color: "H", clarity: "VS2", carat: 1 });
-    expect(p.preliminaryB2bPrice).toBe(2300);
-    expect(p.catalogPrice).toBe(2300);
+    expect(p.finalMarkupPercent).toBe(PRICING_PROFILE.markupFloorPercent);
+    expect(p.preliminaryB2bPrice).toBe(2360);
+    expect(p.catalogPrice).toBe(2360);
 
-    // cost=$2003 -> 2303.45 -> nearest $10 -> 2300.
+    // cost=$2003 -> floored to 18% -> 2363.54 -> nearest $10 -> 2360.
     const p2 = priceLabGrownDiamond({ landedCost: 2003, color: "H", clarity: "VS2", carat: 1 });
-    expect(p2.catalogPrice).toBe(2300);
+    expect(p2.catalogPrice).toBe(2360);
   });
 });
 

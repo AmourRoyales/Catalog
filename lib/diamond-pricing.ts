@@ -4,6 +4,11 @@
 // a stone's landed (stock) cost into the B2B catalog price customers see.
 // It applies to every stone in diamond_stock, regardless of growth type.
 //
+// This file is pure and import-safe from the client (e.g. StoneDetail.tsx
+// reads PRICING_PROFILE directly) — it must never import lib/diamond-stock-
+// query.ts or anything else that touches Mongo. The query+pricing bridge
+// that needs both lives in lib/diamond-query-and-price.ts instead.
+
 // ---------------------------------------------------------------------
 // PRICING_PROFILE — every number below is meant to be edited in place if
 // the business rules change. There's deliberately no settings page or DB
@@ -32,13 +37,23 @@ export const PRICING_PROFILE = {
   clarityAdjustmentBelowSI1: -3, // "SI2 or lower"
 
   // Large-stone adjustment, by the individual diamond's own carat weight.
+  // Kept small on purpose: the cost tiers above already give expensive
+  // stones a lower base % (that's the same "big stone" signal), so this
+  // isn't allowed to double up hard enough to erase the floor's protection
+  // — see markupFloorPercent.
   largeStoneTiers: [
-    { min: 5, adjustmentPercent: -5 },
-    { min: 3, adjustmentPercent: -4 },
-    { min: 2, adjustmentPercent: -2 },
+    { min: 5, adjustmentPercent: -3 },
+    { min: 3, adjustmentPercent: -2 },
+    { min: 2, adjustmentPercent: -1 },
   ] as { min: number; adjustmentPercent: number }[],
 
-  markupFloorPercent: 12,
+  // Every sale here is a single piece, not a bulk order — a thin percentage
+  // on an expensive stone is a thin dollar profit on the whole sale, not
+  // something that averages out. 18% keeps that from happening even after
+  // the cost-tier's lowest base (15%) and the large-stone adjustment above
+  // both apply; well-graded large stones still price above this floor on
+  // their own merits (see the color/clarity adjustments).
+  markupFloorPercent: 18,
   markupCapPercent: 55,
 
   minGrossProfitDollars: 25,
@@ -240,4 +255,53 @@ export function withPublicPricing<T extends PricedRow>(row: T): T {
   const carat = Number(row.carat);
   const rate = carat > 0 ? p.catalogPrice / carat : p.catalogPrice;
   return { ...row, rate, amount: p.catalogPrice };
+}
+
+// ---------------------------------------------------------------------
+// Insert-time pricing snapshot
+// ---------------------------------------------------------------------
+
+/** Snake_case to match the rest of the diamond_stock document (see lib/cad-stock.ts). */
+export type StoredPricingFields = {
+  catalog_rate: number;
+  catalog_amount: number;
+  base_markup_percent: number;
+  color_adjustment_percent: number;
+  clarity_adjustment_percent: number;
+  large_stone_adjustment_percent: number;
+  final_markup_percent: number;
+  margin_amount: number;
+  pricing_review_required: boolean;
+};
+
+/**
+ * Runs the same pricing engine as withAdminPricing/withPublicPricing, but at
+ * import time (lib/cad-stock.ts excelRowToStockRow, via the import route) so
+ * the catalog price is recorded on the diamond_stock document itself instead
+ * of only ever existing as a read-time calculation. `rate`/`amount` on the
+ * document stay the landed cost exactly as imported — untouched here — this
+ * only adds the `catalog_*` fields alongside them.
+ *
+ * The live app still computes the displayed price the same way it always
+ * has (from current stock cost + the current PRICING_PROFILE), so a pricing
+ * rule change in code takes effect immediately without needing a reimport.
+ * This snapshot exists as the recorded book price for the batch as it was
+ * priced on import, and as a foundation for a future true database-level
+ * price sort/filter (today's sort still fetches and prices matches in
+ * memory — see lib/diamond-query-and-price.ts).
+ */
+export function priceStockRowForStorage(row: PricedRow): StoredPricingFields {
+  const p = priceRow(row);
+  const carat = Number(row.carat);
+  return {
+    catalog_rate: carat > 0 ? p.catalogPrice / carat : p.catalogPrice,
+    catalog_amount: p.catalogPrice,
+    base_markup_percent: p.baseMarkupPercent,
+    color_adjustment_percent: p.colorAdjustmentPercent,
+    clarity_adjustment_percent: p.clarityAdjustmentPercent,
+    large_stone_adjustment_percent: p.largeStoneAdjustmentPercent,
+    final_markup_percent: p.finalMarkupPercent,
+    margin_amount: p.catalogPrice - p.landedCost,
+    pricing_review_required: p.pricingReviewRequired,
+  };
 }

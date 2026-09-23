@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { getCurrentUser, unauthorized } from "@/lib/auth";
 import { getDb } from "@/lib/mongo";
 import { excelRowToStockRow } from "@/lib/cad-stock";
+import { priceStockRowForStorage } from "@/lib/diamond-pricing";
 
 const INSERT_BATCH_SIZE = 500;
 
@@ -28,7 +29,21 @@ export async function POST(request: Request) {
   const batchId = randomUUID();
   const rows = rawRows
     .map((row) => excelRowToStockRow(row, batchId))
-    .filter((r): r is Record<string, unknown> => r !== null);
+    .filter((r): r is Record<string, unknown> => r !== null)
+    .map((r) => {
+      // Amount isn't a required Excel column (only Shape/Carat/Rate are) —
+      // fall back to rate × carat so pricing always has a landed cost to work from.
+      const carat = Number(r.carat);
+      const amount = typeof r.amount === "number" ? r.amount : Number(r.rate) * carat;
+      const pricing = priceStockRowForStorage({
+        rate: Number(r.rate),
+        amount,
+        carat,
+        color: String(r.color ?? ""),
+        clarity: String(r.clarity ?? ""),
+      });
+      return { ...r, ...pricing };
+    });
 
   if (rows.length === 0) {
     return NextResponse.json(
