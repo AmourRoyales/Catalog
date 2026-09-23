@@ -7,6 +7,16 @@ import DiamondFilterPanel, { DEFAULT_FILTERS, activeFilterCount, type Facets } f
 import { SHAPE_TILES, ShapeIcon } from "@/components/diamond/shapes";
 import { ACCENT } from "@/components/diamond/ui";
 import StoneDetail, { type StockRow } from "@/components/diamond/StoneDetail";
+import type { DiamondSort } from "@/lib/diamond-stock-query";
+
+type SortKey = "price-asc" | "price-desc" | "carat-asc" | "carat-desc";
+const DEFAULT_SORT_KEY: SortKey = "price-asc";
+const SORT_OPTIONS: { key: SortKey; label: string; sort: DiamondSort }[] = [
+  { key: "price-asc", label: "Price: Low to High", sort: { field: "amount", dir: "asc" } },
+  { key: "price-desc", label: "Price: High to Low", sort: { field: "amount", dir: "desc" } },
+  { key: "carat-asc", label: "Carat: Low to High", sort: { field: "carat", dir: "asc" } },
+  { key: "carat-desc", label: "Carat: High to Low", sort: { field: "carat", dir: "desc" } },
+];
 
 export type ExplorerState = {
   /** The filters last applied (i.e. what the results on screen reflect). */
@@ -53,6 +63,7 @@ export default function DiamondExplorer({
   searchUrl = "/api/diamond-catalogs/search",
   showPrice = true,
   showLocation = true,
+  showCertSearch = true,
   heightClass = "h-[calc(100vh-3.5rem)] md:h-screen",
   initialRows,
   initialTotal,
@@ -62,6 +73,8 @@ export default function DiamondExplorer({
   searchUrl?: string;
   showPrice?: boolean;
   showLocation?: boolean;
+  /** IGI/GIA certificate (report) number lookup — admin-only, the public catalog hides it. */
+  showCertSearch?: boolean;
   heightClass?: string;
   /** Seeds the first render (e.g. from a server component) so there's no blank flash before the client fetch lands. */
   initialRows?: StockRow[];
@@ -70,6 +83,10 @@ export default function DiamondExplorer({
   const [draft, setDraft] = useState<DiamondFilters>(DEFAULT_FILTERS);
   const [applied, setApplied] = useState<DiamondFilters>(DEFAULT_FILTERS);
   const [panelOpen, setPanelOpen] = useState(true);
+  // Price sort is meaningless (and confusing) when price isn't even shown —
+  // default to carat instead, and don't offer the price options at all.
+  const [sortKey, setSortKey] = useState<SortKey>(showPrice ? DEFAULT_SORT_KEY : "carat-asc");
+  const sortOptions = showPrice ? SORT_OPTIONS : SORT_OPTIONS.filter((o) => o.sort.field === "carat");
 
   const [facets, setFacets] = useState<Facets | null>(null);
   const [rows, setRows] = useState<StockRow[]>(initialRows ?? []);
@@ -97,10 +114,11 @@ export default function DiamondExplorer({
       if (replace) setLoading(true);
       else setLoadingMore(true);
       try {
+        const sort = SORT_OPTIONS.find((o) => o.key === sortKey)!.sort;
         const res = await fetch(searchUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filters: applied, page: pageNum }),
+          body: JSON.stringify({ filters: applied, page: pageNum, sort }),
         });
         const data = await res.json();
         if (seq !== requestSeq.current) return;
@@ -114,9 +132,12 @@ export default function DiamondExplorer({
         }
       }
     },
-    [applied, searchUrl]
+    [applied, searchUrl, sortKey]
   );
 
+  // Sort applies immediately (unlike filters, which stage until "Apply
+  // Filters") — re-ordering is one query, not the dozens a staged filter
+  // panel exists to avoid, so there's no reason to make the user confirm it.
   useEffect(() => {
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
@@ -168,7 +189,7 @@ export default function DiamondExplorer({
             </div>
             <div className="flex-1 overflow-y-auto p-3 bg-[#F4F5F7]">
               {facets ? (
-                <DiamondFilterPanel filters={draft} setFilters={setDraft} facets={facets} showLocation={showLocation} />
+                <DiamondFilterPanel filters={draft} setFilters={setDraft} facets={facets} showLocation={showLocation} showCertSearch={showCertSearch} />
               ) : (
                 <p className="p-3 text-sm text-gray-400">Loading filters…</p>
               )}
@@ -216,6 +237,18 @@ export default function DiamondExplorer({
               {loading ? "Searching…" : `${total.toLocaleString()} stone${total === 1 ? "" : "s"}`}
             </span>
             {dirty && <span className="text-[11px] text-amber-600">Filters changed — hit Apply Filters</span>}
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              aria-label="Sort stones"
+              className="ml-auto text-xs sm:text-sm border border-gray-300 rounded-md px-2.5 py-1.5 bg-white text-[#16283A] focus:outline-none focus:border-[#3E86C6] cursor-pointer"
+            >
+              {sortOptions.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">

@@ -7,6 +7,8 @@ import type { Filter } from "mongodb";
 import { getDb, serialize } from "@/lib/mongo";
 
 export type DiamondFilters = {
+  /** IGI/GIA/etc. certificate (report) number — free-text, partial match. Admin-only: never exposed on the public catalog UI or accepted from public filter input. */
+  reportNo?: string;
   shapes?: string[];
   caratMin?: number;
   caratMax?: number;
@@ -72,6 +74,8 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
   const q: Record<string, any> = { stone_stage: "OH" };
   const and: Record<string, any>[] = [];
 
+  if (filters.reportNo?.trim()) q.report_no = { $regex: escapeRegex(filters.reportNo.trim()), $options: "i" };
+
   if (filters.shapes?.length) q.shape = { $in: filters.shapes };
   if (filters.caratMin != null || filters.caratMax != null) {
     q.carat = {
@@ -130,16 +134,33 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
   return q;
 }
 
+// Carat and (total) price, each ascending or descending — the two sort
+// dimensions the builder/public results grid exposes. `_id` is always the
+// tiebreaker, for stable pagination when many stones share a value.
+export type DiamondSortField = "amount" | "carat";
+export type DiamondSort = { field: DiamondSortField; dir: "asc" | "desc" };
+export const DEFAULT_SORT: DiamondSort = { field: "amount", dir: "asc" };
+
+const SORT_FIELDS: DiamondSortField[] = ["amount", "carat"];
+
+/** Parses a client-supplied `{ field, dir }` into a validated DiamondSort, falling back to the default for anything unrecognized. */
+export function parseSort(input: unknown): DiamondSort {
+  const s = (input ?? {}) as { field?: unknown; dir?: unknown };
+  const field = SORT_FIELDS.includes(s.field as DiamondSortField) ? (s.field as DiamondSortField) : DEFAULT_SORT.field;
+  const dir = s.dir === "desc" ? "desc" : DEFAULT_SORT.dir;
+  return { field, dir };
+}
+
 async function runQuery(
   query: Filter<any>,
-  { page = 1, pageSize = 40 }: { page?: number; pageSize?: number } = {}
+  { page = 1, pageSize = 40, sort = DEFAULT_SORT }: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
   const db = await getDb();
   const col = db.collection("diamond_stock");
   const [docs, total] = await Promise.all([
     col
       .find(query, { projection: PUBLIC_PROJECTION })
-      .sort({ amount: 1, _id: 1 })
+      .sort({ [sort.field]: sort.dir === "asc" ? 1 : -1, _id: 1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .toArray(),
@@ -150,7 +171,7 @@ async function runQuery(
 
 export async function queryDiamondStock(
   filters: DiamondFilters,
-  opts: { page?: number; pageSize?: number } = {}
+  opts: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
   return runQuery(buildQuery(filters), opts);
 }
@@ -162,7 +183,7 @@ export async function queryDiamondStock(
 export async function queryDiamondStockScoped(
   base: DiamondFilters,
   extra: DiamondFilters,
-  opts: { page?: number; pageSize?: number } = {}
+  opts: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
   return runQuery({ $and: [buildQuery(base), buildQuery(extra)] }, opts);
 }

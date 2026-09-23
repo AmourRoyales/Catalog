@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongo";
-import { queryDiamondStock, queryDiamondStockScoped, type DiamondFilters } from "@/lib/diamond-stock-query";
-import { withPublicPricing, type PricedRow } from "@/lib/diamond-pricing";
+import { parseSort, type DiamondFilters } from "@/lib/diamond-stock-query";
+import { withPublicPricing } from "@/lib/diamond-pricing";
+import { queryAndPrice } from "@/lib/diamond-query-and-price";
 
 const PAGE_SIZE = 40;
 
@@ -21,11 +22,17 @@ export async function GET(request: Request, { params }: { params: { code: string
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const page = Math.max(1, Number(new URL(request.url).searchParams.get("page")) || 1);
-  const { rows, total } = await queryDiamondStock(catalog.filters as DiamondFilters, { page, pageSize: PAGE_SIZE });
+  const params2 = new URL(request.url).searchParams;
+  const page = Math.max(1, Number(params2.get("page")) || 1);
+  const sort = parseSort({ field: params2.get("sortField"), dir: params2.get("sortDir") });
   // Public: sell price only — see app/diamonds/[code]/page.tsx (first page) for why.
-  const priced = rows.map((r) => withPublicPricing(r as Record<string, unknown> & PricedRow));
-  return NextResponse.json({ rows: priced, total, page, pageSize: PAGE_SIZE });
+  const { rows, total } = await queryAndPrice(withPublicPricing, {
+    filters: catalog.filters as DiamondFilters,
+    sort,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+  return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE });
 }
 
 // Public, unauthenticated — powers the visitor-facing filter panel. `filters`
@@ -39,18 +46,21 @@ export async function POST(request: Request, { params }: { params: { code: strin
   }
 
   const body = await request.json().catch(() => ({}));
-  // Location is internal warehouse info — the public panel doesn't offer it
-  // (see showLocation on DiamondExplorer), and it's stripped here too in
-  // case something still sends it, so the public search can't be used to
-  // probe per-location counts.
+  // Location and certificate-number search are admin-only (see showLocation
+  // / showCertSearch on DiamondExplorer) and stripped here too in case
+  // something still sends them, so the public search can't be used to probe
+  // per-location counts or look up a specific stone by its report number.
   const rawFilters = (body.filters ?? {}) as DiamondFilters;
-  const visitorFilters: DiamondFilters = { ...rawFilters, locations: undefined, excludeLocations: undefined };
+  const visitorFilters: DiamondFilters = { ...rawFilters, locations: undefined, excludeLocations: undefined, reportNo: undefined };
   const page = Math.max(1, Number(body.page) || 1);
+  const sort = parseSort(body.sort);
 
-  const { rows, total } = await queryDiamondStockScoped(catalog.filters as DiamondFilters, visitorFilters, {
+  const { rows, total } = await queryAndPrice(withPublicPricing, {
+    filters: visitorFilters,
+    scopedTo: catalog.filters as DiamondFilters,
+    sort,
     page,
     pageSize: PAGE_SIZE,
   });
-  const priced = rows.map((r) => withPublicPricing(r as Record<string, unknown> & PricedRow));
-  return NextResponse.json({ rows: priced, total, page, pageSize: PAGE_SIZE });
+  return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE });
 }

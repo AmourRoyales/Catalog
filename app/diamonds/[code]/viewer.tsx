@@ -54,6 +54,7 @@ export default function DiamondCatalogViewer({
         searchUrl={`/api/diamonds/${code}`}
         showPrice={showPrice}
         showLocation={false}
+        showCertSearch={false}
         heightClass="h-[calc(100vh-4.25rem)] sm:h-[calc(100vh-4.75rem)]"
         initialRows={initialRows}
         initialTotal={total}

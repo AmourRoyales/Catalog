@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, unauthorized } from "@/lib/auth";
-import { queryDiamondStock, type DiamondFilters } from "@/lib/diamond-stock-query";
-import { withAdminPricing, type PricedRow } from "@/lib/diamond-pricing";
+import { parseSort, type DiamondFilters } from "@/lib/diamond-stock-query";
+import { withAdminPricing } from "@/lib/diamond-pricing";
+import { queryAndPrice } from "@/lib/diamond-query-and-price";
 
 const PAGE_SIZE = 40;
 
@@ -19,8 +20,8 @@ export async function POST(request: Request) {
   const body = await request.json();
   const filters: DiamondFilters = body.filters ?? {};
   const page = Math.max(1, Number(body.page) || 1);
+  const sort = parseSort(body.sort);
 
-  const { rows, total } = await queryDiamondStock(filters, { page, pageSize: PAGE_SIZE });
-  const priced = rows.map((r) => withAdminPricing(r as Record<string, unknown> & PricedRow));
-  return NextResponse.json({ rows: priced, total, page, pageSize: PAGE_SIZE });
+  const { rows, total } = await queryAndPrice(withAdminPricing, { filters, sort, page, pageSize: PAGE_SIZE });
+  return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE });
 }

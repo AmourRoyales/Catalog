@@ -27,10 +27,13 @@ async function ensureIndexes(db: Db) {
     db.collection("diamond_catalogs").createIndex({ code: 1 }, { unique: true }),
     db.collection("diamond_stock").createIndex({ shape: 1, carat: 1 }),
     db.collection("diamond_stock").createIndex({ batch_id: 1 }),
-    // Every diamond_stock query filters on stone_stage and always sorts by
-    // amount — this lets both the filter and the sort use the same index
-    // instead of an in-memory sort, so catalog pages stay fast as stock grows.
+    // Every diamond_stock query filters on stone_stage, and now sorts by
+    // either amount or carat (see lib/diamond-stock-query.ts DiamondSort) —
+    // one index per sortable field lets the filter and the sort share an
+    // index instead of an in-memory sort, so catalog pages stay fast as
+    // stock grows.
     db.collection("diamond_stock").createIndex({ stone_stage: 1, amount: 1 }),
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, carat: 1 }),
   ]);
 }
 

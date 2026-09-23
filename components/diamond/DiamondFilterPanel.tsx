@@ -32,13 +32,15 @@ export function activeFilterCount(f: DiamondFilters): number {
 
 /** The whole filter form — controlled; edits go to `setFilters`, nothing is fetched here. */
 export default function DiamondFilterPanel({
-  filters, setFilters, facets, showLocation = true,
+  filters, setFilters, facets, showLocation = true, showCertSearch = true,
 }: {
   filters: DiamondFilters;
   setFilters: React.Dispatch<React.SetStateAction<DiamondFilters>>;
   facets: Facets;
   /** Location is internal warehouse info — the public catalog hides it. */
   showLocation?: boolean;
+  /** IGI/GIA certificate (report) number lookup — admin-only, the public catalog hides it. */
+  showCertSearch?: boolean;
 }) {
   const [colorsOpen, setColorsOpen] = useState(false);
   const [shapesOpen, setShapesOpen] = useState(false);
@@ -66,6 +68,18 @@ export default function DiamondFilterPanel({
 
   return (
     <div className="space-y-3">
+      {showCertSearch && (
+        <Card title="Certificate Number">
+          <input
+            type="text"
+            value={filters.reportNo ?? ""}
+            placeholder="IGI report / certificate no."
+            onChange={(e) => setFilter("reportNo", e.target.value || undefined)}
+            className="w-full h-9 px-3 border border-gray-300 rounded-md text-xs focus:outline-none focus:border-gray-500"
+          />
+        </Card>
+      )}
+
       <Card title="Show Only">
         <div className="space-y-2">
           <Check checked={!!filters.withMedia} onChange={(v) => setFilter("withMedia", v || undefined)} label="Items with Media" />
