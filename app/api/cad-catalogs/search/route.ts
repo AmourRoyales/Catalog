@@ -64,6 +64,9 @@ export async function POST(request: Request) {
   const withQuotes: boolean = body.withQuotes !== false;
   const ids: string[] | undefined = Array.isArray(body.ids) ? body.ids.filter((x: unknown) => typeof x === "string") : undefined;
   const page = Math.max(1, Number(body.page) || 1);
+  const priceMin = optionalNumber(body.priceMin);
+  const priceMax = optionalNumber(body.priceMax);
+  const priceFiltered = withQuotes && !ids && (priceMin != null || priceMax != null);
 
   if (datasets.length === 0 || metals.length === 0) {
     return NextResponse.json({ items: [], total: 0, page, pageSize: PAGE_SIZE });
@@ -74,8 +77,6 @@ export async function POST(request: Request) {
   const matched = ids
     ? ids.map(getCadDesignById).filter((d): d is NonNullable<typeof d> => !!d)
     : searchCadDesigns({ category, datasets, search, mode });
-  const total = matched.length;
-  const pageItems = all || ids ? matched.slice(0, ALL_MODE_CAP) : matched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const cachedLookupCertifiedRate: CertifiedLookup = memoize(
     lookupCertifiedRate,
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     (shape, mm) => `${shape}:${mm.toFixed(4)}`
   );
 
-  const items = await mapWithConcurrency(pageItems, 8, async (design) => {
+  const priceDesign = async (design: (typeof matched)[number]) => {
     if (!withQuotes) return { design, quotes: {} as Partial<Record<Purity, CadQuote>> };
     const entries = await Promise.all(
       metals.map(async (metal) => {
@@ -101,7 +102,33 @@ export async function POST(request: Request) {
     );
     const quotes = Object.fromEntries(entries) as Partial<Record<Purity, CadQuote>>;
     return { design, quotes };
-  });
+  };
+
+  // A price range can only be checked after pricing, so every match is
+  // priced first (capped), then filtered, then paginated. A design passes
+  // when any selected metal's total lands inside the range.
+  if (priceFiltered) {
+    const capped = matched.slice(0, ALL_MODE_CAP);
+    const priced = await mapWithConcurrency(capped, 8, priceDesign);
+    const inRange = priced.filter((it) =>
+      metals.some((m) => {
+        const t = it.quotes[m]?.total;
+        return t != null && (priceMin == null || t >= priceMin) && (priceMax == null || t <= priceMax);
+      })
+    );
+    const items = all ? inRange : inRange.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    return NextResponse.json({
+      items,
+      total: inRange.length,
+      page: all ? 1 : page,
+      pageSize: all ? items.length : PAGE_SIZE,
+      truncated: matched.length > capped.length,
+    });
+  }
+
+  const total = matched.length;
+  const pageItems = all || ids ? matched.slice(0, ALL_MODE_CAP) : matched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const items = await mapWithConcurrency(pageItems, 8, priceDesign);
 
   return NextResponse.json({
     items,
@@ -110,4 +137,10 @@ export async function POST(request: Request) {
     pageSize: all || ids ? pageItems.length : PAGE_SIZE,
     truncated: all && total > pageItems.length,
   });
+}
+
+function optionalNumber(v: unknown): number | undefined {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
 }

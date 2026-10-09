@@ -70,6 +70,8 @@ export default function NewCadCatalogPage() {
   const [showBranding, setShowBranding] = useState(true);
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"AND" | "OR">("AND");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const [tab, setTab] = useState<"designs" | "selected">("designs");
   const [viewing, setViewing] = useState<ResultItem | null>(null);
 
@@ -92,7 +94,7 @@ export default function NewCadCatalogPage() {
     const res = await fetch("/api/cad-catalogs/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category: category || undefined, datasets, metals, extraPercent, search, mode, ...body }),
+      body: JSON.stringify({ category: category || undefined, datasets, metals, extraPercent, search, mode, priceMin, priceMax, ...body }),
     });
     return res.json();
   }
@@ -123,12 +125,12 @@ export default function NewCadCatalogPage() {
   }, [viewing]);
 
   // Debounced — fires on any filter change (metals, category, extra %,
-  // datasets, search), 350ms after the last change.
+  // datasets, search, price range), 350ms after the last change.
   useEffect(() => {
     const t = setTimeout(() => fetchPage(1, true), 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, metals, extraPercent, datasets, search, mode]);
+  }, [category, metals, extraPercent, datasets, search, mode, priceMin, priceMax]);
 
   // Arriving from Design Finder ("Create catalog"): adopt its filters, and if
   // it handed over a hand-picked selection, pre-add exactly those designs.
@@ -363,6 +365,31 @@ export default function NewCadCatalogPage() {
                 <span className="text-sm text-gray-700">{METAL_LABEL[m]}</span>
               </label>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Price range (any selected metal)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              placeholder="Min $"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#3E86C6]"
+            />
+            <span className="text-gray-400 text-sm">–</span>
+            <input
+              type="number"
+              min={0}
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              placeholder="Max $"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#3E86C6]"
+            />
           </div>
         </div>
 
