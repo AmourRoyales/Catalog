@@ -28,12 +28,16 @@ export async function POST(request: Request) {
   if (typeof b.name !== "string" || !b.name.trim()) {
     return NextResponse.json({ error: "Catalog name is required." }, { status: 400 });
   }
+  const filters = (b.filters ?? {}) as DiamondFilters;
+  if ((await countDiamondStock(filters)) === 0) {
+    return NextResponse.json({ error: "This filter matches no stones — adjust it before saving." }, { status: 400 });
+  }
   const db = await getDb();
   const doc = {
     _id: newId() as any,
     code: newShareCode(),
     name: b.name.trim(),
-    filters: b.filters ?? {},
+    filters,
     show_price: b.show_price !== false,
     show_branding: b.show_branding !== false,
     status: "active",

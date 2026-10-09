@@ -25,6 +25,10 @@ export type ExplorerState = {
   loading: boolean;
   /** True when the filter panel has edits that were not applied yet. */
   dirty: boolean;
+  /** What's currently in the filter panel, applied or not. */
+  draft: DiamondFilters;
+  /** Same as hitting "Apply Filters". */
+  apply: () => void;
   resetAll: () => void;
 };
 
@@ -170,7 +174,7 @@ export default function DiamondExplorer({
 
   return (
     <div className={`flex flex-col ${heightClass} bg-[#F4F5F7]`}>
-      {topBar?.({ filters: applied, total, loading, dirty, resetAll })}
+      {topBar?.({ filters: applied, total, loading, dirty, draft, apply: () => setApplied(draft), resetAll })}
 
       <div className="flex flex-1 min-h-0 relative">
         {/* Left: filters */}
