@@ -57,6 +57,7 @@ export default async function PublicCataloguePage({
 
   return (
     <CatalogueViewer
+      token={params.token}
       name={catalogue.name}
       showPrice={catalogue.show_price}
       showDescription={catalogue.show_description}

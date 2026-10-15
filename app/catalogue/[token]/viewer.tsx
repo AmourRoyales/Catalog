@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/format";
 import { downloadProduct, downloadMany } from "@/lib/download";
 
 type Media = {
+  id: string;
   file_url: string;
   media_type: string;
   sort_order: number;
@@ -64,12 +65,14 @@ function compareNullable(a: number | null, b: number | null, desc: boolean): num
 }
 
 export default function CatalogueViewer({
+  token,
   name,
   showPrice,
   showDescription,
   showBranding,
   products,
 }: {
+  token: string;
   name: string;
   showPrice: boolean;
   showDescription: boolean;
@@ -147,6 +150,24 @@ export default function CatalogueViewer({
   }
 
   const current = openProduct?.product_media[mediaIndex];
+
+  // Video-only share page for the current video (./video/[mediaId]) —
+  // safe to send to a customer; it follows this catalogue's branding.
+  const videoPath =
+    current?.media_type === "video" ? `/catalogue/${token}/video/${current.id}` : null;
+  const [copied, setCopied] = useState(false);
+  async function copyVideoLink() {
+    if (!videoPath) return;
+    const url = `${window.location.origin}${videoPath}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt("Copy this link:", url);
+      return;
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   // Download one product's media (mini-ZIP by code).
   async function handleProductDownload(e: React.MouseEvent, p: Product) {
@@ -422,6 +443,22 @@ export default function CatalogueViewer({
                     />
                   )}
                 </div>
+
+                {videoPath && (
+                  <div className="flex items-center gap-4 px-3 pt-3">
+                    <a
+                      href={videoPath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[#7FB3E0] hover:underline"
+                    >
+                      Open video in new tab ↗
+                    </a>
+                    <button onClick={copyVideoLink} className="text-xs text-[#7FB3E0] hover:underline">
+                      {copied ? "Link copied ✓" : "Copy video link"}
+                    </button>
+                  </div>
+                )}
 
                 {openProduct.product_media.length > 1 && (
                   <div className="flex gap-2 p-3 overflow-x-auto">
