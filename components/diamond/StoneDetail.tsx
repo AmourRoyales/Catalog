@@ -45,6 +45,20 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
   ];
   const [tab, setTab] = useState<Tab>(tabs.find((t) => t.available)?.key ?? "image");
   const isMp4 = !!r.video_link && /\.(mp4|webm|mov)(\?|$)/i.test(r.video_link);
+  // Public video-only page (app/video/[stoneId]) — safe to send to a customer.
+  const videoPath = `/video/${encodeURIComponent(r.stone_id)}`;
+  const [copied, setCopied] = useState(false);
+  const copyVideoLink = async () => {
+    const url = `${window.location.origin}${videoPath}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt("Copy this link:", url);
+      return;
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const hasCost = r.costRate != null && r.costAmount != null && r.finalMarkupPercent != null;
   const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
@@ -137,10 +151,15 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
                     <span className="text-gray-400 text-sm">No certificate</span>
                   ))}
               </div>
-              {tab === "video" && r.video_link && !isMp4 && (
-                <a href={r.video_link} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-2 inline-block" style={{ color: BLUE }}>
-                  Open video in new tab ↗
-                </a>
+              {tab === "video" && r.video_link && (
+                <div className="flex items-center gap-4 mt-2">
+                  <a href={videoPath} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: BLUE }}>
+                    Open video in new tab ↗
+                  </a>
+                  <button onClick={copyVideoLink} className="text-xs hover:underline" style={{ color: BLUE }}>
+                    {copied ? "Link copied ✓" : "Copy video link"}
+                  </button>
+                </div>
               )}
               {tab === "cert" && r.cert_link && (
                 <a href={r.cert_link} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-2 inline-block" style={{ color: BLUE }}>

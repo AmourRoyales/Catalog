@@ -10,9 +10,11 @@ export async function middleware(request: NextRequest) {
   // at /catalog/[code]. "/diamonds" is the live-filtered diamond catalog
   // share link, and its pagination API (/api/diamonds/[code]) must stay
   // public too, or a shared link couldn't load page 2+ once logged out.
+  // "/video" is the single-stone, video-only share link.
   if (
     path.startsWith("/catalog") ||
     path.startsWith("/diamonds") ||
+    path.startsWith("/video/") ||
     path.startsWith("/api/diamonds") ||
     path.startsWith("/api/auth")
   ) {
