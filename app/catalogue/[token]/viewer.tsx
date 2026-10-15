@@ -314,6 +314,7 @@ export default function CatalogueViewer({
                               <video
                                 src={cover.file_url}
                                 className="w-full h-full object-cover"
+                                preload="metadata"
                                 muted
                                 playsInline
                               />
@@ -327,6 +328,8 @@ export default function CatalogueViewer({
                             <img
                               src={cover.file_url}
                               alt={p.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                             />
                           )

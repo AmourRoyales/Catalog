@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { METAL_LABEL, type Purity } from "@/lib/cad-pricing";
 import { groupMatchingSets, type MatchingSetGroup } from "@/lib/matching-set";
@@ -25,6 +25,10 @@ const GENERIC_DIAMOND_FAVICON =
   );
 
 type SortKey = "price-asc" | "price-desc";
+
+// Catalogs can hold thousands of designs — render them in batches as the
+// visitor scrolls instead of mounting every card (and image) up front.
+const BATCH = 60;
 
 /** Combined price of a pair (necklace + earring), for sorting/display. Null if either piece has no price for the current metal. */
 function pairPrice(pair: MatchingSetGroup<CatalogItem>, metal: Purity): number | null {
@@ -98,6 +102,24 @@ export default function CadCatalogViewer({
     });
 
   const shownCount = shownPairs.length + shownSingles.length;
+
+  // Pairs are few and always rendered; singles grow BATCH at a time when the
+  // sentinel below the grid scrolls into view. Back to one batch whenever
+  // the search, metal or sort changes the list.
+  const [visible, setVisible] = useState(BATCH);
+  useEffect(() => setVisible(BATCH), [term, metal, sort]);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const hasMore = visible < shownSingles.length;
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => entries[0].isIntersecting && setVisible((v) => v + BATCH),
+      { rootMargin: "800px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visible]);
 
   return (
     <div className="min-h-screen bg-[#F5F8FB]">
@@ -210,7 +232,7 @@ export default function CadCatalogViewer({
                       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">More Designs</h2>
                     )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {shownSingles.map((item) => (
+                      {shownSingles.slice(0, visible).map((item) => (
                         <button
                           key={item.design_id}
                           onClick={() => setOpen(item)}
@@ -220,6 +242,8 @@ export default function CadCatalogViewer({
                             <img
                               src={item.cad_url}
                               alt={item.design_code}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                             />
                           </div>
@@ -235,6 +259,16 @@ export default function CadCatalogViewer({
                         </button>
                       ))}
                     </div>
+                    {hasMore && (
+                      <div ref={sentinel} className="py-8 text-center">
+                        <button
+                          onClick={() => setVisible((v) => v + BATCH)}
+                          className="text-sm text-[#3E86C6] hover:underline"
+                        >
+                          Showing {visible} of {shownSingles.length} — load more
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

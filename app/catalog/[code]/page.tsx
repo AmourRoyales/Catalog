@@ -26,14 +26,33 @@ export default async function PublicCadCatalogPage({ params }: { params: { code:
   const projection: Record<string, 1> = {
     design_id: 1, dataset: 1, design_code: 1, design_type: 1, cad_url: 1, display_order: 1,
   };
-  if (catalog.show_price) projection.prices = 1;
+  // Only the final price + certified badge per metal — see the note on
+  // `items` below for why the rest of the stored breakdown stays out.
+  if (catalog.show_price) {
+    for (const m of catalog.metals as string[]) {
+      projection[`prices.${m}.price`] = 1;
+      projection[`prices.${m}.certifiedSource`] = 1;
+    }
+  }
 
   const docs = await db
     .collection("cad_catalog_items")
     .find({ catalog_id: catalog._id }, { projection })
     .sort({ display_order: 1 })
     .toArray();
-  const items = docs.map(({ _id, prices, ...it }) => ({ ...it, prices: prices ?? {} })) as any[];
+  // Even with pricing on, ship only what the viewer shows — the final price
+  // and the certified badge per metal. The stored entry also carries the full
+  // cost breakdown (metal grams, rate/gram, subtotal, stone costs), which
+  // would put internal costing in the page source and, at ~1 KB per item,
+  // made a 5,000-design catalog a ~10 MB page.
+  const items = docs.map(({ _id, prices, ...it }) => ({
+    ...it,
+    prices: Object.fromEntries(
+      Object.entries((prices ?? {}) as Record<string, { price: number; certifiedSource: string | null }>).map(
+        ([metal, p]) => [metal, { price: p.price, certifiedSource: p.certifiedSource ?? null }]
+      )
+    ),
+  })) as any[];
 
   return (
     <CadCatalogViewer

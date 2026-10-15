@@ -53,10 +53,10 @@ export default function CompareSlider({
       onPointerLeave={onPointerUp}
     >
       {/* Before (full width, underneath) */}
-      <img src={before} alt={beforeLabel} draggable={false} className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+      <img src={before} alt={beforeLabel} draggable={false} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
       {/* After (clipped to the slider position, on top) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${pct}%)` }}>
-        <img src={after} alt={afterLabel} draggable={false} className="w-full h-full object-contain" />
+        <img src={after} alt={afterLabel} draggable={false} loading="lazy" decoding="async" className="w-full h-full object-contain" />
       </div>
 
       {/* Labels */}
