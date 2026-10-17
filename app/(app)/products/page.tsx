@@ -160,7 +160,7 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#16283A]">Products</h1>
+          <h1 className="font-serif text-2xl text-ink">Products</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {loading ? "Loading…" : `${filtered.length} of ${products.length} products`}
           </p>
@@ -170,7 +170,7 @@ export default function ProductsPage() {
             <button
               onClick={handleBulkDownload}
               disabled={bulkBusy}
-              className="px-4 py-2 text-sm border border-[#16283A] text-[#16283A] font-semibold rounded-lg hover:bg-[#16283A] hover:text-white transition disabled:opacity-50"
+              className="px-4 py-2 text-sm border border-navy text-ink font-semibold rounded-lg hover:bg-navy hover:text-white transition disabled:opacity-50"
             >
               {bulkBusy
                 ? progress && progress.total > 0
@@ -181,7 +181,7 @@ export default function ProductsPage() {
           )}
           <Link
             href="/products/new"
-            className="px-5 py-2 text-sm bg-[#16283A] hover:bg-[#1f3550] text-white font-semibold rounded-lg transition"
+            className="px-5 py-2 text-sm bg-navy hover:bg-navy-hover text-white font-semibold rounded-lg transition"
           >
             + Add Product
           </Link>
@@ -194,12 +194,12 @@ export default function ProductsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or code…"
-          className="flex-1 min-w-[200px] px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+          className="flex-1 min-w-[200px] px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
         />
         <select
           value={category}
           onChange={(e) => handleCategoryChange(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
         >
           <option value="">All categories</option>
           {CATEGORIES.map((c) => (
@@ -212,7 +212,7 @@ export default function ProductsPage() {
           value={subcategory}
           onChange={(e) => setSubcategory(e.target.value)}
           disabled={!category}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6] disabled:opacity-40"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6] disabled:opacity-40"
         >
           <option value="">All styles</option>
           {category &&
@@ -225,7 +225,7 @@ export default function ProductsPage() {
         <select
           value={stoneShape}
           onChange={(e) => setStoneShape(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
         >
           <option value="">All diamond shapes</option>
           {DIAMOND_SHAPES.map((o) => (
@@ -237,7 +237,7 @@ export default function ProductsPage() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
         >
           <option value="">All status</option>
           <option value="active">Active</option>
@@ -269,9 +269,9 @@ export default function ProductsPage() {
               <Link
                 key={p.id}
                 href={`/products/${p.id}`}
-                className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition relative"
+                className="group bg-surface border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition relative"
               >
-                <div className="aspect-square bg-gradient-to-br from-[#Eef3f8] to-[#e2eaf2] flex items-center justify-center overflow-hidden">
+                <div className="aspect-square bg-gradient-to-br from-grad-from to-grad-to flex items-center justify-center overflow-hidden">
                   {p.cover_url ? (
                     p.cover_type === "video" ? (
                       <video
@@ -297,14 +297,14 @@ export default function ProductsPage() {
                     onClick={(e) => handleProductDownload(e, p)}
                     disabled={busyId === p.id}
                     title="Download this product's media"
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-[#16283A] flex items-center justify-center shadow hover:bg-white transition disabled:opacity-60 text-sm"
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-ink flex items-center justify-center shadow hover:bg-surface transition disabled:opacity-60 text-sm"
                   >
                     {busyId === p.id ? "…" : "↓"}
                   </button>
                 )}
 
                 <div className="p-3">
-                  <p className="text-sm font-semibold text-[#16283A] truncate">{p.name}</p>
+                  <p className="text-sm font-semibold text-ink truncate">{p.name}</p>
                   <p className="text-[11px] text-gray-400 mb-1.5">{p.product_code}</p>
                   <div className="flex flex-wrap gap-1 mb-2">
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
@@ -322,7 +322,7 @@ export default function ProductsPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-[#16283A]">
+                    <span className="text-sm font-bold text-ink">
                       {formatPrice(p.price)}
                     </span>
                     <span

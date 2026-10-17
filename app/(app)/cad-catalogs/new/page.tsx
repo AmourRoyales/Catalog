@@ -27,11 +27,11 @@ function DesignCard({
   item: ResultItem; chosen: boolean; order?: number; onView: () => void; actions: React.ReactNode; metals: Purity[];
 }) {
   return (
-    <div className={`bg-white rounded-xl border overflow-hidden flex flex-col ${chosen ? "border-[#3E86C6]" : "border-gray-200"}`}>
-      <button onClick={onView} className="relative block aspect-square bg-[#F5F8FB] group" title="View CAD">
+    <div className={`bg-surface rounded-xl border overflow-hidden flex flex-col ${chosen ? "border-[#3E86C6]" : "border-gray-200"}`}>
+      <button onClick={onView} className="relative block aspect-square bg-page group" title="View CAD">
         <img src={item.design.cadUrl} alt={item.design.code} loading="lazy" className="w-full h-full object-contain group-hover:scale-[1.03] transition" />
         {order != null && (
-          <span className="absolute top-2 left-2 min-w-[22px] h-[22px] px-1 rounded-full bg-[#16283A] text-white text-[11px] font-semibold flex items-center justify-center">
+          <span className="absolute top-2 left-2 min-w-[22px] h-[22px] px-1 rounded-full bg-navy text-white text-[11px] font-semibold flex items-center justify-center">
             {order}
           </span>
         )}
@@ -41,7 +41,7 @@ function DesignCard({
       </button>
       <div className="px-3 pt-2.5 pb-3 flex flex-col gap-2 flex-1">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#16283A] truncate">
+          <p className="text-sm font-semibold text-ink truncate">
             {item.design.code}
             <span className="ml-1.5 text-[10px] font-normal px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 align-middle">
               {CAD_DATASET_LABEL[item.design.dataset].split(" ")[0]}
@@ -274,7 +274,7 @@ export default function NewCadCatalogPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#16283A]">New CAD Catalog</h1>
+          <h1 className="font-serif text-2xl text-ink">New CAD Catalog</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Pick metals, a category and a markup — prices are computed live from the CAD library.
           </p>
@@ -303,7 +303,7 @@ export default function NewCadCatalogPage() {
       )}
 
       {/* Settings */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="bg-surface border border-gray-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
           <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
             Catalog name *
@@ -324,7 +324,7 @@ export default function NewCadCatalogPage() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+              className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
             >
               <option value="">All categories</option>
               {CAD_CATEGORIES.map((c) => (
@@ -450,9 +450,9 @@ export default function NewCadCatalogPage() {
       </div>
 
       {tab === "designs" ? (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#16283A] shrink-0">
+            <span className="text-sm font-semibold text-ink shrink-0">
               {loading ? "Searching…" : `${total.toLocaleString()} designs`}
             </span>
             <input
@@ -523,7 +523,7 @@ export default function NewCadCatalogPage() {
               <button
                 onClick={addAllMatching}
                 disabled={addingAll}
-                className="text-xs text-[#16283A] font-semibold hover:underline disabled:opacity-50"
+                className="text-xs text-ink font-semibold hover:underline disabled:opacity-50"
               >
                 {addingAll ? "Adding…" : `Select all ${total.toLocaleString()} matching`}
               </button>
@@ -531,9 +531,9 @@ export default function NewCadCatalogPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#16283A]">
+            <span className="text-sm font-semibold text-ink">
               {selected.length} design{selected.length === 1 ? "" : "s"} in this catalog
             </span>
             {selected.length > 0 && (
@@ -565,7 +565,7 @@ export default function NewCadCatalogPage() {
                         <button
                           onClick={() => move(item.design.id, -1)}
                           disabled={i === 0}
-                          className="text-xs text-gray-400 hover:text-[#16283A] px-2 py-1 disabled:opacity-20 transition"
+                          className="text-xs text-gray-400 hover:text-ink px-2 py-1 disabled:opacity-20 transition"
                           title="Move earlier"
                         >
                           ◀
@@ -573,7 +573,7 @@ export default function NewCadCatalogPage() {
                         <button
                           onClick={() => move(item.design.id, 1)}
                           disabled={i === selected.length - 1}
-                          className="text-xs text-gray-400 hover:text-[#16283A] px-2 py-1 disabled:opacity-20 transition"
+                          className="text-xs text-gray-400 hover:text-ink px-2 py-1 disabled:opacity-20 transition"
                           title="Move later"
                         >
                           ▶
@@ -597,10 +597,10 @@ export default function NewCadCatalogPage() {
       {/* CAD preview */}
       {viewing && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setViewing(null)}>
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <div>
-                <p className="font-semibold text-[#16283A]">{viewing.design.code}</p>
+                <p className="font-semibold text-ink">{viewing.design.code}</p>
                 <p className="text-xs text-gray-400">
                   {viewing.design.type} · {viewing.design.collection} · {CAD_DATASET_LABEL[viewing.design.dataset]}
                 </p>
@@ -610,14 +610,14 @@ export default function NewCadCatalogPage() {
               </button>
             </div>
             <div className="p-5 grid md:grid-cols-[1.4fr_1fr] gap-5">
-              <img src={viewing.design.cadUrl} alt={viewing.design.code} className="w-full rounded-lg bg-[#F5F8FB] object-contain" />
+              <img src={viewing.design.cadUrl} alt={viewing.design.code} className="w-full rounded-lg bg-page object-contain" />
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Price</p>
                 <div className="space-y-1 mb-4">
                   {metals.map((m) => (
                     <div key={m} className="flex justify-between text-sm">
                       <span className="text-gray-600">{METAL_LABEL[m]}</span>
-                      <span className="font-semibold text-[#16283A]">
+                      <span className="font-semibold text-ink">
                         {viewing.quotes[m] ? formatPrice(viewing.quotes[m]!.total) : "—"}
                       </span>
                     </div>
@@ -632,7 +632,7 @@ export default function NewCadCatalogPage() {
                 <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Tags</p>
                 <div className="flex flex-wrap gap-1.5 mb-5">
                   {viewing.design.tags.map((t) => (
-                    <span key={t} className="text-[11px] px-2 py-1 rounded-md bg-[#F5F8FB] text-gray-600">
+                    <span key={t} className="text-[11px] px-2 py-1 rounded-md bg-page text-gray-600">
                       {t}
                     </span>
                   ))}

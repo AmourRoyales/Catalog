@@ -196,7 +196,7 @@ export default function DiamondStockPage() {
   return (
     <div className="p-8 max-w-4xl">
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#16283A]">Diamond Stock</h1>
+        <h1 className="font-serif text-2xl text-ink">Diamond Stock</h1>
         <p className="text-sm text-gray-500 mt-0.5">
           Certified stones from each supplier, used by the diamond catalogs and to price Solitaire Rings, Three Stone
           Rings, Solitaire Pendants and Studs over 0.5ct. Uploading a supplier&apos;s list replaces only that
@@ -205,22 +205,22 @@ export default function DiamondStockPage() {
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
+      <div className="bg-surface border border-gray-200 rounded-xl p-5 mb-5">
         {loading && !stats ? (
           <p className="text-sm text-gray-400">Loading…</p>
         ) : (
           <div className="flex gap-8">
             <div>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Stones on file</p>
-              <p className="text-2xl font-serif text-[#16283A] mt-1">{(stats?.count ?? 0).toLocaleString()}</p>
+              <p className="text-2xl font-serif text-ink mt-1">{(stats?.count ?? 0).toLocaleString()}</p>
             </div>
             <div>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Suppliers</p>
-              <p className="text-2xl font-serif text-[#16283A] mt-1">{named.length}</p>
+              <p className="text-2xl font-serif text-ink mt-1">{named.length}</p>
             </div>
             <div>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Last imported</p>
-              <p className="text-sm text-[#16283A] mt-1.5">
+              <p className="text-sm text-ink mt-1.5">
                 {stats?.lastImportedAt ? formatDate(stats.lastImportedAt) : "Never"}
               </p>
             </div>
@@ -259,7 +259,7 @@ export default function DiamondStockPage() {
         }}
       />
 
-      <div className="bg-white border border-gray-200 rounded-xl mb-5 overflow-hidden">
+      <div className="bg-surface border border-gray-200 rounded-xl mb-5 overflow-hidden">
         <div className="px-5 pt-5 pb-3">
           <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Suppliers</p>
         </div>
@@ -281,7 +281,7 @@ export default function DiamondStockPage() {
                 {suppliers.map((s) => (
                   <tr key={s.id ?? "unassigned"} className="border-b border-gray-100 last:border-0">
                     <td className="px-5 py-3">
-                      <p className={s.id ? "text-[#16283A] font-medium" : "text-gray-500 italic"}>{s.name}</p>
+                      <p className={s.id ? "text-ink font-medium" : "text-gray-500 italic"}>{s.name}</p>
                       {!s.id && <p className="text-xs text-gray-400">Uploaded before suppliers existed</p>}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums">{s.count.toLocaleString()}</td>
@@ -328,7 +328,7 @@ export default function DiamondStockPage() {
                                   const target = named.find((n) => n.id === e.target.value);
                                   if (target) assignUnassigned(target);
                                 }}
-                                className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 bg-white disabled:opacity-50"
+                                className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 bg-surface disabled:opacity-50"
                               >
                                 <option value="">Assign to…</option>
                                 {named.map((n) => (
@@ -377,7 +377,7 @@ export default function DiamondStockPage() {
         </p>
       </div>
 
-      <div className="bg-white border border-red-200 rounded-xl p-5">
+      <div className="bg-surface border border-red-200 rounded-xl p-5">
         <p className="text-[11px] font-semibold text-red-600 uppercase tracking-wide mb-1">Danger zone</p>
         <p className="text-sm text-gray-600 mb-3">Remove every stone from every supplier.</p>
         <button
@@ -391,8 +391,8 @@ export default function DiamondStockPage() {
 
       {confirm && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirm(null)}>
-          <div className="bg-white rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-serif text-xl text-[#16283A] mb-2">{confirm.title}</h2>
+          <div className="bg-surface rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-serif text-xl text-ink mb-2">{confirm.title}</h2>
             <p className="text-sm text-gray-600">{confirm.body}</p>
             <div className="flex justify-end gap-2 mt-5">
               <button

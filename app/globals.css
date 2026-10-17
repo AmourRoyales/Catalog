@@ -2,18 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The app is designed light-only. Without this, a device in dark mode
-   turns inherited text (form field values) near-white on white cards. */
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  color-scheme: light;
+/* Theme colour variables (and color-scheme, which themes native form
+   controls and scrollbars) come from tailwind.config.ts. */
+body {
+  color: rgb(var(--ink));
+  background: rgb(var(--page));
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  /* Fields without their own bg-* class: match the card they sit on rather
+     than the browser's neutral grey in dark mode. Utilities still win. */
+  /* :where() keeps specificity at zero, so any bg-* utility overrides it. */
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea) {
+    background-color: rgb(var(--surface));
+  }
 }
 
 @layer utilities {

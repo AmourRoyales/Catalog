@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/format";
 import { METAL_LABEL, type Purity } from "@/lib/cad-pricing";
 import { groupMatchingSets, type MatchingSetGroup } from "@/lib/matching-set";
 import CompareSlider from "@/components/cad/CompareSlider";
+import { ThemeMenu } from "@/components/ThemeToggle";
 
 type PriceEntry = { price: number; certifiedSource: string | null };
 
@@ -122,8 +123,8 @@ export default function CadCatalogViewer({
   }, [hasMore, visible]);
 
   return (
-    <div className="min-h-screen bg-[#F5F8FB]">
-      <header className="bg-[#16283A] px-6 py-5 sticky top-0 z-10">
+    <div className="min-h-screen bg-page">
+      <header className="bg-chrome px-6 py-5 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div>
             {showBranding ? (
@@ -135,9 +136,12 @@ export default function CadCatalogViewer({
               <h1 className="font-serif text-xl text-white/90">{name}</h1>
             )}
           </div>
-          <span className="text-xs text-white/40">
-            {shownCount} {shownCount === 1 ? "piece" : "pieces"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/40">
+              {shownCount} {shownCount === 1 ? "piece" : "pieces"}
+            </span>
+            <ThemeMenu />
+          </div>
         </div>
       </header>
 
@@ -155,8 +159,8 @@ export default function CadCatalogViewer({
                     aria-pressed={metal === m}
                     className={`px-4 py-1.5 rounded-full text-sm border whitespace-nowrap transition ${
                       metal === m
-                        ? "bg-[#16283A] text-white border-[#16283A]"
-                        : "bg-white text-gray-600 border-gray-300 hover:border-[#16283A]"
+                        ? "bg-navy text-white border-navy"
+                        : "bg-surface text-gray-600 border-gray-300 hover:border-navy"
                     }`}
                   >
                     {METAL_LABEL[m] ?? m}
@@ -170,14 +174,14 @@ export default function CadCatalogViewer({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by code…"
-                className="flex-1 min-w-[180px] px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="flex-1 min-w-[180px] px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
               />
               {showPrice && (
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortKey)}
                   aria-label="Sort pieces"
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white text-[#16283A] focus:outline-none focus:border-[#3E86C6] cursor-pointer"
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-[#3E86C6] cursor-pointer"
                 >
                   <option value="price-asc">Price: Low to High</option>
                   <option value="price-desc">Price: High to Low</option>
@@ -201,7 +205,7 @@ export default function CadCatalogViewer({
                           <button
                             key={pair.setCode}
                             onClick={() => setOpenSet(pair)}
-                            className="group text-left bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition"
+                            className="group text-left bg-surface border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition"
                           >
                             <CompareSlider
                               before={pair.necklace.cad_url}
@@ -211,12 +215,12 @@ export default function CadCatalogViewer({
                               className="aspect-square"
                             />
                             <div className="p-3">
-                              <p className="text-sm font-semibold text-[#16283A] truncate">Matching Set</p>
+                              <p className="text-sm font-semibold text-ink truncate">Matching Set</p>
                               <p className="text-[11px] text-gray-400 mb-1.5">
                                 {pair.necklace.design_code} + {pair.earring.design_code}
                               </p>
                               {showPrice && total != null && (
-                                <p className="text-sm font-bold text-[#16283A]">{formatPrice(total)} the set</p>
+                                <p className="text-sm font-bold text-ink">{formatPrice(total)} the set</p>
                               )}
                             </div>
                           </button>
@@ -236,9 +240,9 @@ export default function CadCatalogViewer({
                         <button
                           key={item.design_id}
                           onClick={() => setOpen(item)}
-                          className="group text-left bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition"
+                          className="group text-left bg-surface border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition"
                         >
-                          <div className="aspect-square bg-gradient-to-br from-[#eef3f8] to-[#e2eaf2] overflow-hidden flex items-center justify-center">
+                          <div className="aspect-square bg-gradient-to-br from-grad-from to-grad-to overflow-hidden flex items-center justify-center">
                             <img
                               src={item.cad_url}
                               alt={item.design_code}
@@ -248,10 +252,10 @@ export default function CadCatalogViewer({
                             />
                           </div>
                           <div className="p-3">
-                            <p className="text-sm font-semibold text-[#16283A] truncate">{item.design_code}</p>
+                            <p className="text-sm font-semibold text-ink truncate">{item.design_code}</p>
                             <p className="text-[11px] text-gray-400 mb-1.5">{item.design_type}</p>
                             {showPrice && (
-                              <p className="text-sm font-bold text-[#16283A]">
+                              <p className="text-sm font-bold text-ink">
                                 {formatPrice(item.prices[metal]?.price)}
                               </p>
                             )}
@@ -290,7 +294,7 @@ export default function CadCatalogViewer({
           onClick={() => setOpen(null)}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto"
+            className="bg-surface rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
@@ -315,7 +319,7 @@ export default function CadCatalogViewer({
                   ×
                 </button>
                 <p className="text-[11px] text-gray-400">{open.design_code}</p>
-                <h2 className="font-serif text-2xl text-[#16283A] mt-1">{open.design_type}</h2>
+                <h2 className="font-serif text-2xl text-ink mt-1">{open.design_type}</h2>
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   <span className="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-600">
                     {METAL_LABEL[metal] ?? metal}
@@ -327,7 +331,7 @@ export default function CadCatalogViewer({
                   )}
                 </div>
                 {showPrice && (
-                  <p className="font-serif text-3xl text-[#16283A] mt-5">
+                  <p className="font-serif text-3xl text-ink mt-5">
                     {formatPrice(open.prices[metal]?.price)}
                   </p>
                 )}
@@ -344,12 +348,12 @@ export default function CadCatalogViewer({
           onClick={() => setOpenSet(null)}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto"
+            className="bg-surface rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <div>
-                <p className="font-serif text-lg text-[#16283A]">Matching Set</p>
+                <p className="font-serif text-lg text-ink">Matching Set</p>
                 <p className="text-[11px] text-gray-400">
                   {openSet.necklace.design_code} + {openSet.earring.design_code}
                 </p>
@@ -385,7 +389,7 @@ export default function CadCatalogViewer({
                     {label} · {item.design_code}
                   </p>
                   {showPrice && (
-                    <p className="font-serif text-xl text-[#16283A] mt-1">{formatPrice(item.prices[metal]?.price)}</p>
+                    <p className="font-serif text-xl text-ink mt-1">{formatPrice(item.prices[metal]?.price)}</p>
                   )}
                 </div>
               ))}
@@ -396,7 +400,7 @@ export default function CadCatalogViewer({
                 <span className="text-sm text-gray-600">
                   Total for the set · <span className="text-[11px] text-gray-400">{METAL_LABEL[metal] ?? metal}</span>
                 </span>
-                <span className="font-serif text-2xl text-[#16283A]">{formatPrice(pairPrice(openSet, metal))}</span>
+                <span className="font-serif text-2xl text-ink">{formatPrice(pairPrice(openSet, metal))}</span>
               </div>
             )}
           </div>

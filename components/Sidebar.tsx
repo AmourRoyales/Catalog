@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type NavItem = { href: string; label: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -59,7 +60,7 @@ export default function Sidebar({
   return (
     <>
       {/* Mobile top bar — only shows on small screens */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#16283A] flex items-center justify-between px-4 py-3">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-chrome flex items-center justify-between px-4 py-3">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
@@ -84,7 +85,7 @@ export default function Sidebar({
           - On mobile: slides in from the left only when `open` is true. */}
       <aside
         className={`
-          bg-[#16283A] flex flex-col shrink-0 w-56
+          bg-chrome flex flex-col shrink-0 w-56
           fixed inset-y-0 left-0 z-40 transition-transform duration-200
           ${open ? "translate-x-0" : "-translate-x-full"}
           md:static md:translate-x-0
@@ -151,7 +152,10 @@ export default function Sidebar({
           </Link>
         </nav>
 
-        <div className="px-5 py-4 border-t border-white/10 flex items-center gap-2.5">
+        <div className="px-4 pt-3 border-t border-white/10">
+          <ThemeToggle />
+        </div>
+        <div className="px-5 py-4 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-[#3E86C6] flex items-center justify-center text-xs font-bold text-white shrink-0">
             {name?.charAt(0).toUpperCase() ?? "?"}
           </div>

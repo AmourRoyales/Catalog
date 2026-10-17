@@ -54,7 +54,7 @@ export default async function CatalogueVideoPage({ params }: { params: Params })
 
   if (!video) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F8FB]">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center px-6">
           <p className="text-gray-500 mt-4">This video is not available.</p>
           <p className="text-sm text-gray-400 mt-1">The link may be incorrect, or the video has been removed.</p>
@@ -64,9 +64,9 @@ export default async function CatalogueVideoPage({ params }: { params: Params })
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F8FB] flex flex-col">
+    <div className="min-h-screen bg-page flex flex-col">
       {video.showBranding && (
-        <header className="px-4 sm:px-6 py-3 border-b border-gray-200 bg-white">
+        <header className="px-4 sm:px-6 py-3 border-b border-gray-200 bg-surface">
           <p className="font-serif text-lg text-[#3E86C6]">JeniDiam</p>
         </header>
       )}
@@ -84,7 +84,7 @@ export default async function CatalogueVideoPage({ params }: { params: Params })
             />
           )}
         </div>
-        <p className="font-serif text-lg text-[#16283A] mt-3">{video.name}</p>
+        <p className="font-serif text-lg text-ink mt-3">{video.name}</p>
       </main>
     </div>
   );

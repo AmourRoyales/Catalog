@@ -7,7 +7,7 @@ export default async function PublicCadCatalogPage({ params }: { params: { code:
 
   if (!catalog || catalog.status !== "active") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F8FB]">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center px-6">
           <p className="text-gray-500 mt-4">This catalog is not available.</p>
           <p className="text-sm text-gray-400 mt-1">

@@ -8,9 +8,9 @@ export default function DiamondSearchPage() {
   return (
     <DiamondExplorer
       topBar={({ total, loading }) => (
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex flex-wrap items-center gap-3">
+        <div className="bg-surface border-b border-gray-200 px-6 py-3 flex flex-wrap items-center gap-3">
           <div className="mr-2">
-            <h1 className="font-serif text-lg text-[#16283A] leading-tight">Diamonds</h1>
+            <h1 className="font-serif text-lg text-ink leading-tight">Diamonds</h1>
             <p className="text-[11px] text-gray-500">Browse current stock with the same filters used for catalogs.</p>
           </div>
           <div className="ml-auto flex items-center gap-3">

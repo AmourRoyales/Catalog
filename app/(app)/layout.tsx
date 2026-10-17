@@ -12,7 +12,7 @@ export default async function AppLayout({
   const profile = user ? await db.collection("users").findOne({ _id: user.id as any }) : null;
 
   return (
-    <div className="flex h-screen bg-[#F5F8FB]">
+    <div className="flex h-screen bg-page">
       <Sidebar name={profile?.name ?? "User"} />
 
       {/* Main area — pushed below the mobile top bar on phones (pt-14),

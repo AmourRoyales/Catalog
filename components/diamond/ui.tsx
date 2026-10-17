@@ -1,12 +1,12 @@
 import type React from "react";
 
 export const ACCENT = "#3E86C6";
-export const TINT = "#DCE8F3";
+export const TINT = "rgb(var(--tint-2))";
 
 // ---- Small UI pieces -----------------------------------------------------
 export function Card({ title, children, className = "" }: { title?: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={`bg-white rounded-lg border border-gray-200 px-5 py-4 ${className}`}>
+    <section className={`bg-surface rounded-lg border border-gray-200 px-5 py-4 ${className}`}>
       {title && <h3 className="text-[13px] font-bold text-gray-900 mb-3">{title}</h3>}
       {children}
     </section>
@@ -29,7 +29,7 @@ export function Pill({
           ? "text-white"
           : disabled
           ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-          : "bg-[#EEF0F3] text-gray-600 hover:bg-[#E2E5EA]"
+          : "bg-subtle-2 text-gray-600 hover:bg-placeholder-2"
       }`}
       style={active ? { background: ACCENT } : undefined}
     >

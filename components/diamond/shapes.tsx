@@ -76,7 +76,7 @@ export const ICON_PATHS: Record<string, string> = {
 
 export function ShapeIcon({ kind, active, size = 26 }: { kind: string; active: boolean; size?: number }) {
   const d = ICON_PATHS[kind] ?? ICON_PATHS.circle;
-  const c = active ? ACCENT : "#6B7280";
+  const c = active ? ACCENT : "rgb(var(--gray-500))";
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={c} strokeWidth="1.2" strokeLinejoin="round">
       <path d={d} />

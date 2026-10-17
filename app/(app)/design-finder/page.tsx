@@ -163,7 +163,7 @@ export default function DesignFinderPage() {
     <div className="p-8 pb-28">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#16283A]">Design Finder</h1>
+          <h1 className="font-serif text-2xl text-ink">Design Finder</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Search CAD designs by tag combinations, then turn the results into a catalog.
           </p>
@@ -172,7 +172,7 @@ export default function DesignFinderPage() {
           <button
             onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
             className={`shrink-0 px-4 py-2 text-sm rounded-lg border transition ${
-              selectMode ? "bg-[#3E86C6] border-[#3E86C6] text-white" : "border-gray-300 text-gray-600 hover:bg-gray-50 bg-white"
+              selectMode ? "bg-[#3E86C6] border-[#3E86C6] text-white" : "border-gray-300 text-gray-600 hover:bg-gray-50 bg-surface"
             }`}
           >
             {selectMode ? "Cancel Select" : "Select"}
@@ -181,7 +181,7 @@ export default function DesignFinderPage() {
       </div>
 
       {/* Browse mode */}
-      <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1 w-fit mb-6">
+      <div className="flex gap-1 rounded-lg border border-gray-200 bg-surface p-1 w-fit mb-6">
         {([
           { value: "designs", label: "Browse Designs" },
           { value: "sets", label: "Matching Sets" },
@@ -215,7 +215,7 @@ export default function DesignFinderPage() {
                 <button
                   key={s.setCode}
                   onClick={() => setOpenSet(s)}
-                  className="text-left bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition"
+                  className="text-left bg-surface rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition"
                 >
                   <CompareSlider
                     before={s.necklace.cadUrl}
@@ -225,7 +225,7 @@ export default function DesignFinderPage() {
                     className="aspect-square"
                   />
                   <div className="px-3 py-2.5">
-                    <p className="text-sm font-semibold text-[#16283A] truncate">Set {s.setCode}</p>
+                    <p className="text-sm font-semibold text-ink truncate">Set {s.setCode}</p>
                     <p className="text-[11px] text-gray-400 truncate">
                       {s.necklace.code} + {s.earring.code}
                     </p>
@@ -244,7 +244,7 @@ export default function DesignFinderPage() {
             key={p.value}
             onClick={() => setCategory(p.value)}
             className={`px-4 py-1.5 text-sm font-medium rounded-full transition ${
-              category === p.value ? "bg-[#3E86C6] text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-[#3E86C6]"
+              category === p.value ? "bg-[#3E86C6] text-white" : "bg-surface text-gray-600 border border-gray-200 hover:border-[#3E86C6]"
             }`}
           >
             {p.label}
@@ -269,9 +269,9 @@ export default function DesignFinderPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g. Round, Eternity, US 7   or   2mm Each Round OR 0.2ct Each Princess, Tennis"
-          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-white shadow-sm focus:outline-none focus:border-[#3E86C6]"
+          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-surface shadow-sm focus:outline-none focus:border-[#3E86C6]"
         />
-        <div className="flex shrink-0 rounded-lg border border-gray-200 bg-white p-1">
+        <div className="flex shrink-0 rounded-lg border border-gray-200 bg-surface p-1">
           {(["AND", "OR"] as const).map((m) => (
             <button
               key={m}
@@ -310,7 +310,7 @@ export default function DesignFinderPage() {
             <div
               key={d.id}
               onClick={() => (selectMode ? toggleSelected(d.id) : setOpen(d))}
-              className={`relative cursor-pointer bg-white rounded-xl border overflow-hidden transition hover:shadow-md ${
+              className={`relative cursor-pointer bg-surface rounded-xl border overflow-hidden transition hover:shadow-md ${
                 selected ? "border-[#3E86C6] ring-2 ring-[#3E86C6]/40" : "border-gray-200"
               }`}
             >
@@ -323,11 +323,11 @@ export default function DesignFinderPage() {
                   {selected && "✓"}
                 </span>
               )}
-              <div className="aspect-square bg-[#F5F8FB]">
+              <div className="aspect-square bg-page">
                 <img src={d.cadUrl} alt={d.code} loading="lazy" className="w-full h-full object-contain" />
               </div>
               <div className="px-3 py-2.5">
-                <p className="text-sm font-semibold text-[#16283A] truncate">
+                <p className="text-sm font-semibold text-ink truncate">
                   {d.code}
                   <span className="ml-1.5 text-[10px] font-normal px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 align-middle">
                     {CAD_DATASET_LABEL[d.dataset].split(" ")[0]}
@@ -349,8 +349,8 @@ export default function DesignFinderPage() {
       {/* Selection bar */}
       {selectMode && selectedIds.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-6 pb-6 pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-4 rounded-full border border-gray-200 bg-white px-5 py-3 shadow-lg">
-            <span className="text-sm font-medium text-[#16283A]">{selectedIds.size} selected</span>
+          <div className="pointer-events-auto flex items-center gap-4 rounded-full border border-gray-200 bg-surface px-5 py-3 shadow-lg">
+            <span className="text-sm font-medium text-ink">{selectedIds.size} selected</span>
             <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-400 hover:text-gray-700">
               Clear
             </button>
@@ -367,10 +367,10 @@ export default function DesignFinderPage() {
       {/* Detail modal */}
       {open && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setOpen(null)}>
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <div>
-                <p className="font-semibold text-[#16283A]">{open.code}</p>
+                <p className="font-semibold text-ink">{open.code}</p>
                 <p className="text-xs text-gray-400">
                   {open.type} · {open.collection} · {CAD_DATASET_LABEL[open.dataset]}
                 </p>
@@ -380,10 +380,10 @@ export default function DesignFinderPage() {
               </button>
             </div>
             <div className="p-5 grid md:grid-cols-2 gap-5">
-              <img src={open.cadUrl} alt={open.code} className="w-full rounded-lg bg-[#F5F8FB] object-contain" />
+              <img src={open.cadUrl} alt={open.code} className="w-full rounded-lg bg-page object-contain" />
               <div className="flex flex-wrap content-start gap-1.5">
                 {open.tags.map((t) => (
-                  <span key={t} className="text-[11px] px-2 py-1 rounded-md bg-[#F5F8FB] text-gray-600">
+                  <span key={t} className="text-[11px] px-2 py-1 rounded-md bg-page text-gray-600">
                     {t}
                   </span>
                 ))}
@@ -398,9 +398,9 @@ export default function DesignFinderPage() {
       {/* Matching set modal — both CADs side by side */}
       {openSet && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setOpenSet(null)}>
-          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-              <p className="font-semibold text-[#16283A]">Matching Set {openSet.setCode}</p>
+              <p className="font-semibold text-ink">Matching Set {openSet.setCode}</p>
               <button onClick={() => setOpenSet(null)} className="text-2xl leading-none text-gray-400 hover:text-gray-700">
                 ×
               </button>
@@ -414,10 +414,10 @@ export default function DesignFinderPage() {
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                     {label} · {design.code}
                   </p>
-                  <img src={design.cadUrl} alt={`${label} ${design.code}`} className="w-full aspect-square rounded-lg bg-[#F5F8FB] object-contain" />
+                  <img src={design.cadUrl} alt={`${label} ${design.code}`} className="w-full aspect-square rounded-lg bg-page object-contain" />
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {design.tags.slice(0, 8).map((t) => (
-                      <span key={t} className="text-[11px] px-2 py-1 rounded-md bg-[#F5F8FB] text-gray-600">
+                      <span key={t} className="text-[11px] px-2 py-1 rounded-md bg-page text-gray-600">
                         {t}
                       </span>
                     ))}

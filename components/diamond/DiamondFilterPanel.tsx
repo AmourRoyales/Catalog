@@ -100,7 +100,7 @@ export default function DiamondFilterPanel({
                 title={disabled ? "Not in your stock" : `${n} in stock`}
                 onClick={() => toggleMany("shapes", t.values)}
                 className={`h-[60px] rounded-md border flex flex-col items-center justify-center gap-0.5 transition ${
-                  active ? "bg-[#EAF2FA]" : "bg-[#EEF0F3] border-transparent hover:bg-[#E2E5EA]"
+                  active ? "bg-tint" : "bg-subtle-2 border-transparent hover:bg-placeholder-2"
                 } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                 style={active ? { borderColor: ACCENT } : undefined}
               >

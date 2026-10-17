@@ -6,6 +6,7 @@
 // (unauthenticated) search/facets routes instead of the admin ones.
 import { useEffect } from "react";
 import DiamondExplorer from "@/components/diamond/DiamondExplorer";
+import { ThemeMenu } from "@/components/ThemeToggle";
 import type { StockRow } from "@/components/diamond/StoneDetail";
 
 export type { StockRow };
@@ -33,8 +34,8 @@ export default function DiamondCatalogViewer({
   }, [name, showBranding]);
 
   return (
-    <div className="min-h-screen bg-[#F5F8FB] flex flex-col">
-      <header className="bg-[#16283A] px-4 sm:px-6 py-4 shrink-0">
+    <div className="min-h-screen bg-page flex flex-col">
+      <header className="bg-chrome px-4 sm:px-6 py-4 shrink-0">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div>
             {showBranding ? (
@@ -46,6 +47,7 @@ export default function DiamondCatalogViewer({
               <h1 className="font-serif text-lg sm:text-xl text-white/90">{name}</h1>
             )}
           </div>
+          <ThemeMenu />
         </div>
       </header>
 
@@ -61,7 +63,7 @@ export default function DiamondCatalogViewer({
       />
 
       {showBranding && (
-        <footer className="py-3 text-center shrink-0 border-t border-gray-100 bg-white">
+        <footer className="py-3 text-center shrink-0 border-t border-gray-100 bg-surface">
           <p className="font-serif text-xs text-[#3E86C6]">JeniDiam</p>
         </footer>
       )}

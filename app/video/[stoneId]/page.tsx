@@ -40,7 +40,7 @@ export default async function StoneVideoPage({ params }: { params: { stoneId: st
 
   if (!stone?.video_link) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F8FB]">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center px-6">
           <p className="text-gray-500 mt-4">This video is not available.</p>
           <p className="text-sm text-gray-400 mt-1">The link may be incorrect, or the stone is no longer available.</p>
@@ -52,12 +52,12 @@ export default async function StoneVideoPage({ params }: { params: { stoneId: st
   const isMp4 = /\.(mp4|webm|mov)(\?|$)/i.test(stone.video_link);
 
   return (
-    <div className="min-h-screen bg-[#F5F8FB] flex flex-col">
-      <header className="px-4 sm:px-6 py-3 border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-page flex flex-col">
+      <header className="px-4 sm:px-6 py-3 border-b border-gray-200 bg-surface">
         <p className="font-serif text-lg text-[#3E86C6]">JeniDiam</p>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6">
-        <div className="w-full max-w-3xl aspect-square bg-[#D9DBE6] rounded-xl overflow-hidden flex items-center justify-center">
+        <div className="w-full max-w-3xl aspect-square bg-placeholder-3 rounded-xl overflow-hidden flex items-center justify-center">
           {isMp4 ? (
             <video
               src={stone.video_link}
@@ -71,7 +71,7 @@ export default async function StoneVideoPage({ params }: { params: { stoneId: st
               className="w-full h-full object-contain"
             />
           ) : (
-            <iframe src={stone.video_link} title="360° video" className="w-full h-full bg-white" allow="fullscreen" />
+            <iframe src={stone.video_link} title="360° video" className="w-full h-full bg-surface" allow="fullscreen" />
           )}
         </div>
         <p className="text-sm text-gray-600 mt-3">{describe(stone)}</p>

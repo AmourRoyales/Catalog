@@ -42,12 +42,12 @@ function StoneImage({ row, className }: { row: StockRow; className?: string }) {
   const [failed, setFailed] = useState(false);
   if (!row.image_link || failed) {
     return (
-      <div className={`flex items-center justify-center bg-[#E9ECF0] ${className ?? ""}`}>
+      <div className={`flex items-center justify-center bg-placeholder ${className ?? ""}`}>
         <ShapeIcon kind={iconFor(row.shape)} active={false} size={56} />
       </div>
     );
   }
-  return <img src={row.image_link} alt={stoneTitle(row)} loading="lazy" onError={() => setFailed(true)} className={`object-cover bg-[#E9ECF0] ${className ?? ""}`} />;
+  return <img src={row.image_link} alt={stoneTitle(row)} loading="lazy" onError={() => setFailed(true)} className={`object-cover bg-placeholder ${className ?? ""}`} />;
 }
 
 /**
@@ -173,15 +173,15 @@ export default function DiamondExplorer({
   }, []);
 
   return (
-    <div className={`flex flex-col ${heightClass} bg-[#F4F5F7]`}>
+    <div className={`flex flex-col ${heightClass} bg-subtle`}>
       {topBar?.({ filters: applied, total, loading, dirty, draft, apply: () => setApplied(draft), resetAll })}
 
       <div className="flex flex-1 min-h-0 relative">
         {/* Left: filters */}
         {panelOpen ? (
-          <aside className="absolute inset-y-0 left-0 z-20 w-[min(400px,92vw)] md:static md:z-auto shrink-0 flex flex-col bg-white border-r border-gray-200 shadow-lg md:shadow-none">
+          <aside className="absolute inset-y-0 left-0 z-20 w-[min(400px,92vw)] md:static md:z-auto shrink-0 flex flex-col bg-surface border-r border-gray-200 shadow-lg md:shadow-none">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200">
-              <span className="text-sm font-semibold text-[#16283A]">Filters</span>
+              <span className="text-sm font-semibold text-ink">Filters</span>
               <button
                 onClick={() => setPanelOpen(false)}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800"
@@ -191,17 +191,17 @@ export default function DiamondExplorer({
                 Hide
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 bg-[#F4F5F7]">
+            <div className="flex-1 overflow-y-auto p-3 bg-subtle">
               {facets ? (
                 <DiamondFilterPanel filters={draft} setFilters={setDraft} facets={facets} showLocation={showLocation} showCertSearch={showCertSearch} />
               ) : (
                 <p className="p-3 text-sm text-gray-400">Loading filters…</p>
               )}
             </div>
-            <div className="flex gap-2 p-3 border-t border-gray-200 bg-white">
+            <div className="flex gap-2 p-3 border-t border-gray-200 bg-surface">
               <button
                 onClick={resetAll}
-                className="flex-1 h-10 rounded-md text-sm font-semibold text-gray-600 bg-[#EEF0F3] hover:bg-[#E2E5EA]"
+                className="flex-1 h-10 rounded-md text-sm font-semibold text-gray-600 bg-subtle-2 hover:bg-placeholder-2"
               >
                 Reset All
               </button>
@@ -222,7 +222,7 @@ export default function DiamondExplorer({
 
         {/* Right: results */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-200">
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-gray-200">
             {!panelOpen && (
               <button
                 onClick={() => setPanelOpen(true)}
@@ -245,7 +245,7 @@ export default function DiamondExplorer({
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
               aria-label="Sort stones"
-              className="ml-auto text-xs sm:text-sm border border-gray-300 rounded-md px-2.5 py-1.5 bg-white text-[#16283A] focus:outline-none focus:border-[#3E86C6] cursor-pointer"
+              className="ml-auto text-xs sm:text-sm border border-gray-300 rounded-md px-2.5 py-1.5 bg-surface text-ink focus:outline-none focus:border-[#3E86C6] cursor-pointer"
             >
               {sortOptions.map((o) => (
                 <option key={o.key} value={o.key}>
@@ -261,7 +261,7 @@ export default function DiamondExplorer({
                 <button
                   key={r.id}
                   onClick={() => setOpen(r)}
-                  className="text-left bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition"
+                  className="text-left bg-surface rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition"
                 >
                   <StoneImage row={r} className="w-full aspect-[4/3.3]" />
                   <div className="px-3.5 pt-3 pb-3.5">

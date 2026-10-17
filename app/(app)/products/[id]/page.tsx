@@ -258,7 +258,7 @@ export default function EditProductPage() {
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#16283A]">Edit Product</h1>
+          <h1 className="font-serif text-2xl text-ink">Edit Product</h1>
           <p className="text-sm text-gray-500 mt-0.5">{productCode}</p>
         </div>
         <div className="flex gap-2">
@@ -293,8 +293,8 @@ export default function EditProductPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
         {/* LEFT — details */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-[#16283A] pb-3 mb-4 border-b border-gray-100">
+        <div className="bg-surface border border-gray-200 rounded-xl p-6">
+          <h2 className="text-sm font-semibold text-ink pb-3 mb-4 border-b border-gray-100">
             Basic information
           </h2>
 
@@ -329,7 +329,7 @@ export default function EditProductPage() {
               <select
                 value={category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
               >
                 <option value="">Select…</option>
                 {CATEGORIES.map((c) => (
@@ -346,7 +346,7 @@ export default function EditProductPage() {
               <select
                 value={subcategory}
                 onChange={(e) => setSubcategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
               >
                 <option value="">Select…</option>
                 {subOptions?.options.map((o) => (
@@ -363,7 +363,7 @@ export default function EditProductPage() {
               <select
                 value={stoneShape}
                 onChange={(e) => setStoneShape(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
               >
                 <option value="">Select…</option>
                 {stoneOptions?.options.map((o) => (
@@ -396,8 +396,8 @@ export default function EditProductPage() {
                   onClick={() => setStatus("active")}
                   className={`px-4 py-1.5 rounded-lg text-sm border transition ${
                     status === "active"
-                      ? "bg-[#16283A] text-white border-[#16283A]"
-                      : "bg-white text-gray-500 border-gray-300"
+                      ? "bg-navy text-white border-navy"
+                      : "bg-surface text-gray-500 border-gray-300"
                   }`}
                 >
                   Active
@@ -407,8 +407,8 @@ export default function EditProductPage() {
                   onClick={() => setStatus("draft")}
                   className={`px-4 py-1.5 rounded-lg text-sm border transition ${
                     status === "draft"
-                      ? "bg-[#16283A] text-white border-[#16283A]"
-                      : "bg-white text-gray-500 border-gray-300"
+                      ? "bg-navy text-white border-navy"
+                      : "bg-surface text-gray-500 border-gray-300"
                   }`}
                 >
                   Draft
@@ -431,8 +431,8 @@ export default function EditProductPage() {
         </div>
 
         {/* RIGHT — media */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-[#16283A] pb-3 mb-4 border-b border-gray-100">
+        <div className="bg-surface border border-gray-200 rounded-xl p-6">
+          <h2 className="text-sm font-semibold text-ink pb-3 mb-4 border-b border-gray-100">
             Media
           </h2>
 

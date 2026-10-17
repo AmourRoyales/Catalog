@@ -74,14 +74,14 @@ export default function DiamondCatalogsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#16283A]">Diamond Catalogs</h1>
+          <h1 className="font-serif text-2xl text-ink">Diamond Catalogs</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {loading ? "Loading…" : `${active.length} active · ${archived.length} archived`} — links stay live against current stock.
           </p>
         </div>
         <Link
           href="/diamond-catalogs/new"
-          className="px-5 py-2 text-sm bg-[#16283A] hover:bg-[#1f3550] text-white font-semibold rounded-lg transition"
+          className="px-5 py-2 text-sm bg-navy hover:bg-navy-hover text-white font-semibold rounded-lg transition"
         >
           + New Diamond Catalog
         </Link>
@@ -105,15 +105,15 @@ export default function DiamondCatalogsPage() {
           {[...active, ...archived].map((c) => (
             <div
               key={c.id}
-              className={`bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4 ${
+              className={`bg-surface border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4 ${
                 c.status === "archived" ? "opacity-55" : ""
               }`}
             >
-              <div className="w-10 h-10 rounded-lg bg-[#F5F8FB] border border-gray-100 flex items-center justify-center text-lg shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-page border border-gray-100 flex items-center justify-center text-lg shrink-0">
                 ◆
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#16283A] truncate">{c.name}</p>
+                <p className="text-sm font-semibold text-ink truncate">{c.name}</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-400 mt-0.5">
                   <span>{c.matchCount} stones currently match</span>
                   <span>{filterSummary(c.filters)}</span>

@@ -372,7 +372,7 @@ export default function EditCataloguePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#16283A]">Edit Catalogue</h1>
+          <h1 className="font-serif text-2xl text-ink">Edit Catalogue</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Changes apply to the existing share link instantly.
           </p>
@@ -407,7 +407,7 @@ export default function EditCataloguePage() {
       )}
 
       {/* Name + toggles */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
+      <div className="bg-surface border border-gray-200 rounded-xl p-5 mb-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
@@ -452,10 +452,10 @@ export default function EditCataloguePage() {
       </div>
 
       {/* Catalogue-specific pricing */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
+      <div className="bg-surface border border-gray-200 rounded-xl p-5 mb-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-sm font-semibold text-[#16283A]">
+            <h2 className="text-sm font-semibold text-ink">
               Catalogue-specific pricing
             </h2>
             <p className="text-xs text-gray-500 mt-1 max-w-md">
@@ -479,7 +479,7 @@ export default function EditCataloguePage() {
             />
             <label
               htmlFor="price-upload"
-              className={`inline-block px-4 py-2 text-sm border border-[#16283A] text-[#16283A] font-semibold rounded-lg transition cursor-pointer hover:bg-[#16283A] hover:text-white ${
+              className={`inline-block px-4 py-2 text-sm border border-navy text-ink font-semibold rounded-lg transition cursor-pointer hover:bg-navy hover:text-white ${
                 uploading ? "opacity-50 pointer-events-none" : ""
               }`}
             >
@@ -530,10 +530,10 @@ export default function EditCataloguePage() {
       {/* Two-panel builder */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* LEFT — available products */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[#16283A] shrink-0">
+              <span className="text-sm font-semibold text-ink shrink-0">
                 All products
               </span>
               <input
@@ -547,7 +547,7 @@ export default function EditCataloguePage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => handleCategoryFilterChange(e.target.value)}
-                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-surface focus:outline-none focus:border-[#3E86C6]"
               >
                 <option value="">All categories</option>
                 {CATEGORIES.map((c) => (
@@ -560,7 +560,7 @@ export default function EditCataloguePage() {
                 value={styleFilter}
                 onChange={(e) => setStyleFilter(e.target.value)}
                 disabled={!categoryFilter}
-                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:border-[#3E86C6] disabled:opacity-40"
+                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-surface focus:outline-none focus:border-[#3E86C6] disabled:opacity-40"
               >
                 <option value="">All styles</option>
                 {styleOptions.map((o) => (
@@ -572,7 +572,7 @@ export default function EditCataloguePage() {
               <select
                 value={stoneFilter}
                 onChange={(e) => setStoneFilter(e.target.value)}
-                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-surface focus:outline-none focus:border-[#3E86C6]"
               >
                 <option value="">All stones</option>
                 {stoneOptions.map((o) => (
@@ -599,7 +599,7 @@ export default function EditCataloguePage() {
                   key={p.id}
                   className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50 transition"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-[#F5F8FB] overflow-hidden shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-page overflow-hidden shrink-0">
                     {p.cover_url && (
                       <img
                         src={p.cover_url}
@@ -609,7 +609,7 @@ export default function EditCataloguePage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#16283A] truncate">
+                    <p className="text-sm font-medium text-ink truncate">
                       {p.name}
                     </p>
                     <p className="text-[11px] text-gray-400 truncate">
@@ -643,9 +643,9 @@ export default function EditCataloguePage() {
         </div>
 
         {/* RIGHT — selected products */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#16283A]">
+            <span className="text-sm font-semibold text-ink">
               In this catalogue
             </span>
             <span className="text-xs text-gray-400">
@@ -667,7 +667,7 @@ export default function EditCataloguePage() {
                   <span className="text-[11px] text-gray-300 w-5 text-right shrink-0">
                     {i + 1}
                   </span>
-                  <div className="w-9 h-9 rounded-lg bg-[#F5F8FB] overflow-hidden shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-page overflow-hidden shrink-0">
                     {p.cover_url && (
                       <img
                         src={p.cover_url}
@@ -677,7 +677,7 @@ export default function EditCataloguePage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#16283A] truncate">
+                    <p className="text-sm font-medium text-ink truncate">
                       {p.name}
                     </p>
                     <p className="text-[11px] text-gray-400 truncate">
@@ -696,7 +696,7 @@ export default function EditCataloguePage() {
                     <button
                       onClick={() => move(p.id, -1)}
                       disabled={i === 0}
-                      className="text-xs text-gray-400 hover:text-[#16283A] px-1 disabled:opacity-20 transition"
+                      className="text-xs text-gray-400 hover:text-ink px-1 disabled:opacity-20 transition"
                       title="Move up"
                     >
                       ▲
@@ -704,7 +704,7 @@ export default function EditCataloguePage() {
                     <button
                       onClick={() => move(p.id, 1)}
                       disabled={i === selected.length - 1}
-                      className="text-xs text-gray-400 hover:text-[#16283A] px-1 disabled:opacity-20 transition"
+                      className="text-xs text-gray-400 hover:text-ink px-1 disabled:opacity-20 transition"
                       title="Move down"
                     >
                       ▼

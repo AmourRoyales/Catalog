@@ -96,11 +96,11 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
     video: (
       <div className="relative w-full h-full bg-gray-500 flex items-center justify-center">
         {r.image_link && <img src={r.image_link} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />}
-        <span className="relative w-7 h-7 rounded-full bg-white flex items-center justify-center text-gray-600 text-xs">▶</span>
+        <span className="relative w-7 h-7 rounded-full bg-surface flex items-center justify-center text-gray-600 text-xs">▶</span>
       </div>
     ),
     cert: (
-      <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#16283A]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" className="w-7 h-7 text-ink" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="3" width="14" height="14" rx="1.5" /><path d="M8 7h6M8 10h6" /><circle cx="16" cy="17" r="3" /><path d="M14.5 19.5 14 23l2-1 2 1-.5-3.5" />
       </svg>
     ),
@@ -108,8 +108,8 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
-      <div className="relative bg-[#EDEEF3] rounded-2xl w-full max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white text-gray-500 hover:bg-gray-100 text-lg leading-none">×</button>
+      <div className="relative bg-subtle-3 rounded-2xl w-full max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-surface text-gray-500 hover:bg-gray-100 text-lg leading-none">×</button>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
           {/* Media: thumbnails + viewer */}
@@ -120,7 +120,7 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
                   key={t.key}
                   disabled={!t.available}
                   onClick={() => setTab(t.key)}
-                  className={`w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-lg overflow-hidden border-2 bg-white flex items-center justify-center ${
+                  className={`w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-lg overflow-hidden border-2 bg-surface flex items-center justify-center ${
                     t.available ? "" : "opacity-30 cursor-not-allowed"
                   }`}
                   style={{ borderColor: tab === t.key ? BLUE : "transparent" }}
@@ -131,7 +131,7 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
               ))}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="aspect-square bg-[#D9DBE6] rounded-lg overflow-hidden flex items-center justify-center">
+              <div className="aspect-square bg-placeholder-3 rounded-lg overflow-hidden flex items-center justify-center">
                 {tab === "image" &&
                   (r.image_link ? <img src={r.image_link} alt={r.stone_id} className="w-full h-full object-contain" /> : <span className="text-gray-400 text-sm">No image</span>)}
                 {tab === "video" &&
@@ -139,14 +139,14 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
                     isMp4 ? (
                       <video key={r.video_link} src={r.video_link} controls autoPlay loop playsInline className="w-full h-full object-contain" />
                     ) : (
-                      <iframe src={r.video_link} title="360° video" className="w-full h-full bg-white" allow="fullscreen" />
+                      <iframe src={r.video_link} title="360° video" className="w-full h-full bg-surface" allow="fullscreen" />
                     )
                   ) : (
                     <span className="text-gray-400 text-sm">No video</span>
                   ))}
                 {tab === "cert" &&
                   (r.cert_link ? (
-                    <iframe src={r.cert_link} title={`${r.cert} certificate`} className="w-full h-full bg-white" />
+                    <iframe src={r.cert_link} title={`${r.cert} certificate`} className="w-full h-full bg-surface" />
                   ) : (
                     <span className="text-gray-400 text-sm">No certificate</span>
                   ))}
@@ -171,13 +171,13 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
 
           {/* Info */}
           <div className="min-w-0">
-            <h2 className="text-3xl font-bold text-black mt-8 pr-8">
+            <h2 className="text-3xl font-bold text-gray-950 mt-8 pr-8">
               {titleCase(r.shape)} {Number(r.carat).toFixed(2)}ct {r.color} {r.clarity}
             </h2>
-            <p className="text-sm text-gray-600 mt-3">Stock# <span className="font-semibold text-black">{r.stone_id}</span></p>
+            <p className="text-sm text-gray-600 mt-3">Stock# <span className="font-semibold text-gray-950">{r.stone_id}</span></p>
 
             {showPrice && (
-              <div className="bg-white rounded-xl border border-gray-200 mt-5 px-4 py-3 text-sm">
+              <div className="bg-surface rounded-xl border border-gray-200 mt-5 px-4 py-3 text-sm">
                 <div className="grid grid-cols-[1fr_1fr_1.4fr]">
                   <span />
                   <span className="text-gray-600">P/ct</span>
@@ -190,8 +190,8 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
                     </>
                   )}
                   <span className={`text-gray-600 ${hasCost ? "pt-1.5 font-semibold" : "pt-3"}`}>{hasCost ? "Catalog Price" : "Price"}</span>
-                  <span className={`font-semibold text-black ${hasCost ? "pt-1.5" : "pt-3"}`}>{formatPrice(r.rate)}</span>
-                  <span className={`font-semibold text-black ${hasCost ? "pt-1.5" : "pt-3"}`}>{formatPrice(r.amount)}</span>
+                  <span className={`font-semibold text-gray-950 ${hasCost ? "pt-1.5" : "pt-3"}`}>{formatPrice(r.rate)}</span>
+                  <span className={`font-semibold text-gray-950 ${hasCost ? "pt-1.5" : "pt-3"}`}>{formatPrice(r.amount)}</span>
                 </div>
                 {hasCost && (
                   <div className="pt-2.5 mt-2.5 border-t border-gray-100 space-y-1">
@@ -234,9 +234,9 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
               </div>
             )}
 
-            <div className="bg-white rounded-xl mt-5 overflow-hidden">
+            <div className="bg-surface rounded-xl mt-5 overflow-hidden">
               <button onClick={() => setDetailsOpen((o) => !o)} className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                <span className="text-lg font-bold text-black">Product Details</span>
+                <span className="text-lg font-bold text-gray-950">Product Details</span>
                 <span className={`text-gray-400 transition ${detailsOpen ? "" : "rotate-180"}`}>⌃</span>
               </button>
               {detailsOpen && (
@@ -246,7 +246,7 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
                       {col.map(([k, v]) => (
                         <div key={k} className="grid grid-cols-[6.5rem_1fr] gap-2">
                           <dt className="text-gray-600">{k}</dt>
-                          <dd className="text-black font-semibold break-words">{v}</dd>
+                          <dd className="text-gray-950 font-semibold break-words">{v}</dd>
                         </div>
                       ))}
                     </dl>

@@ -12,7 +12,7 @@ export default async function PublicCataloguePage({
 
   if (!catalogue || catalogue.status !== "active") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F8FB]">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center px-6">
           <p className="text-gray-500 mt-4">
             This catalogue is not available.

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CATEGORIES } from "@/lib/jewelry-options";
+import { ThemeMenu } from "@/components/ThemeToggle";
 import { formatPrice } from "@/lib/format";
 import { downloadProduct, downloadMany } from "@/lib/download";
 
@@ -206,9 +207,9 @@ export default function CatalogueViewer({
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F8FB]">
+    <div className="min-h-screen bg-page">
       {/* Header */}
-      <header className="bg-[#16283A] px-6 py-5 sticky top-0 z-10">
+      <header className="bg-chrome px-6 py-5 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div>
             {showBranding ? (
@@ -222,9 +223,12 @@ export default function CatalogueViewer({
               <h1 className="font-serif text-xl text-white/90">{name}</h1>
             )}
           </div>
-          <span className="text-xs text-white/40">
-            {shown.length} {shown.length === 1 ? "piece" : "pieces"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/40">
+              {shown.length} {shown.length === 1 ? "piece" : "pieces"}
+            </span>
+            <ThemeMenu />
+          </div>
         </div>
       </header>
 
@@ -246,8 +250,8 @@ export default function CatalogueViewer({
                     aria-pressed={filterCat === c.value}
                     className={`px-4 py-1.5 rounded-full text-sm border whitespace-nowrap transition ${
                       filterCat === c.value
-                        ? "bg-[#16283A] text-white border-[#16283A]"
-                        : "bg-white text-gray-600 border-gray-300 hover:border-[#16283A]"
+                        ? "bg-navy text-white border-navy"
+                        : "bg-surface text-gray-600 border-gray-300 hover:border-navy"
                     }`}
                   >
                     {c.label}
@@ -262,14 +266,14 @@ export default function CatalogueViewer({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or code…"
-                className="flex-1 min-w-[180px] px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[#3E86C6]"
+                className="flex-1 min-w-[180px] px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-surface focus:outline-none focus:border-[#3E86C6]"
               />
 
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
                 aria-label="Sort pieces"
-                className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white text-[#16283A] focus:outline-none focus:border-[#3E86C6] cursor-pointer"
+                className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-[#3E86C6] cursor-pointer"
               >
                 {sortOptions.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -282,7 +286,7 @@ export default function CatalogueViewer({
                 <button
                   onClick={handleBulkDownload}
                   disabled={bulkBusy}
-                  className="ml-auto px-4 py-2 text-sm border border-[#16283A] text-[#16283A] font-semibold rounded-lg hover:bg-[#16283A] hover:text-white transition disabled:opacity-50 shrink-0"
+                  className="ml-auto px-4 py-2 text-sm border border-navy text-ink font-semibold rounded-lg hover:bg-navy hover:text-white transition disabled:opacity-50 shrink-0"
                 >
                   {bulkBusy
                     ? progress && progress.total > 0
@@ -305,9 +309,9 @@ export default function CatalogueViewer({
                     <button
                       key={p.id}
                       onClick={() => open(p)}
-                      className="group text-left bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition relative"
+                      className="group text-left bg-surface border border-gray-200 rounded-xl overflow-hidden hover:border-[#3E86C6] hover:shadow-lg hover:shadow-[#3E86C6]/10 transition relative"
                     >
-                      <div className="aspect-square bg-gradient-to-br from-[#eef3f8] to-[#e2eaf2] overflow-hidden flex items-center justify-center relative">
+                      <div className="aspect-square bg-gradient-to-br from-grad-from to-grad-to overflow-hidden flex items-center justify-center relative">
                         {cover ? (
                           cover.media_type === "video" ? (
                             <>
@@ -343,14 +347,14 @@ export default function CatalogueViewer({
                         <span
                           onClick={(e) => handleProductDownload(e, p)}
                           title="Download this product's media"
-                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-[#16283A] flex items-center justify-center shadow hover:bg-white transition text-sm cursor-pointer"
+                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-ink flex items-center justify-center shadow hover:bg-surface transition text-sm cursor-pointer"
                         >
                           {busyId === p.id ? "…" : "↓"}
                         </span>
                       )}
 
                       <div className="p-3">
-                        <p className="text-sm font-semibold text-[#16283A] truncate">
+                        <p className="text-sm font-semibold text-ink truncate">
                           {p.name}
                         </p>
                         <p className="text-[11px] text-gray-400 mb-1.5">
@@ -372,7 +376,7 @@ export default function CatalogueViewer({
                           )}
                         </div>
                         {showPrice && p.price != null && (
-                          <p className="text-sm font-bold text-[#16283A]">
+                          <p className="text-sm font-bold text-ink">
                             {formatPrice(p.price)}
                           </p>
                         )}
@@ -400,7 +404,7 @@ export default function CatalogueViewer({
           onClick={() => setOpenProduct(null)}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto"
+            className="bg-surface rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
@@ -502,7 +506,7 @@ export default function CatalogueViewer({
                 </button>
 
                 <p className="text-[11px] text-gray-400">{openProduct.product_code}</p>
-                <h2 className="font-serif text-2xl text-[#16283A] mt-1">
+                <h2 className="font-serif text-2xl text-ink mt-1">
                   {openProduct.name}
                 </h2>
 
@@ -523,7 +527,7 @@ export default function CatalogueViewer({
                 </div>
 
                 {showPrice && openProduct.price != null && (
-                  <p className="font-serif text-3xl text-[#16283A] mt-5">
+                  <p className="font-serif text-3xl text-ink mt-5">
                     {formatPrice(openProduct.price)}
                   </p>
                 )}
@@ -539,7 +543,7 @@ export default function CatalogueViewer({
                   <button
                     onClick={(e) => handleProductDownload(e, openProduct)}
                     disabled={busyId === openProduct.id}
-                    className="mt-6 w-full px-4 py-2.5 text-sm bg-[#16283A] hover:bg-[#1f3550] text-white font-semibold rounded-lg transition disabled:opacity-50"
+                    className="mt-6 w-full px-4 py-2.5 text-sm bg-navy hover:bg-navy-hover text-white font-semibold rounded-lg transition disabled:opacity-50"
                   >
                     {busyId === openProduct.id ? "Preparing…" : "↓ Download this piece"}
                   </button>

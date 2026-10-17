@@ -46,7 +46,7 @@ export default function CompareSlider({
   return (
     <div
       ref={containerRef}
-      className={`relative select-none touch-none overflow-hidden bg-[#F5F8FB] ${className ?? ""}`}
+      className={`relative select-none touch-none overflow-hidden bg-page ${className ?? ""}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -68,7 +68,7 @@ export default function CompareSlider({
       </span>
 
       {/* Handle */}
-      <div className="absolute inset-y-0 w-0.5 bg-white shadow pointer-events-none" style={{ left: `${pct}%` }} />
+      <div className="absolute inset-y-0 w-0.5 bg-surface shadow pointer-events-none" style={{ left: `${pct}%` }} />
       <div
         role="slider"
         tabIndex={0}
@@ -80,7 +80,7 @@ export default function CompareSlider({
           if (e.key === "ArrowLeft") setPct((p) => Math.max(0, p - 5));
           if (e.key === "ArrowRight") setPct((p) => Math.min(100, p + 5));
         }}
-        className="absolute top-1/2 w-7 h-7 -mt-3.5 -ml-3.5 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center cursor-ew-resize focus:outline-none focus:ring-2 focus:ring-[#3E86C6]"
+        className="absolute top-1/2 w-7 h-7 -mt-3.5 -ml-3.5 rounded-full bg-surface shadow-md border border-gray-200 flex items-center justify-center cursor-ew-resize focus:outline-none focus:ring-2 focus:ring-[#3E86C6]"
         style={{ left: `${pct}%` }}
       >
         <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#16283A" strokeWidth="1.5" strokeLinecap="round">
