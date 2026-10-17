@@ -2,16 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Stats = { count: number; lastImportedAt: string | null };
+type Supplier = {
+  id: string | null; // null = stones uploaded before suppliers existed
+  name: string;
+  count: number;
+  shown: number;
+  lastImportedAt: string | null;
+};
+type Stats = { count: number; lastImportedAt: string | null; suppliers: Supplier[] };
+type Message = { type: "success" | "error"; text: string; details?: string[] };
+type Confirm = { title: string; body: React.ReactNode; confirmLabel: string; run: () => Promise<void> };
+
+const FIELD_LABEL: Record<string, string> = {
+  stone_id: "Stone ID", report_no: "Certificate number", color: "Color", clarity: "Clarity",
+  measurement: "Measurement", cert: "Lab",
+};
 
 export default function DiamondStockPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null); // label of the running action
+  const [message, setMessage] = useState<Message | null>(null);
+  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [newSupplier, setNewSupplier] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [confirmingPurge, setConfirmingPurge] = useState(false);
-  const [purging, setPurging] = useState(false);
+  const uploadTarget = useRef<Supplier | null>(null);
 
   async function loadStats() {
     setLoading(true);
@@ -24,43 +39,149 @@ export default function DiamondStockPage() {
     loadStats();
   }, []);
 
-  async function handleUpload(file: File) {
-    setUploading(true);
+  async function run(label: string, action: () => Promise<Message>) {
+    setBusy(label);
     setMessage(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/diamond-stock/import", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Import failed.");
-      setMessage({
-        type: "success",
-        text: `Imported ${data.imported} stones${data.skipped ? ` (skipped ${data.skipped} incomplete rows)` : ""}.`,
-      });
+      setMessage(await action());
       await loadStats();
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Something went wrong." });
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setBusy(null);
     }
   }
 
-  async function handlePurge() {
-    setPurging(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/diamond-stock", { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Purge failed.");
-      setMessage({ type: "success", text: `Purged ${data.deleted.toLocaleString()} stones. Upload a new stock list to restore them.` });
-      await loadStats();
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Something went wrong." });
-    } finally {
-      setPurging(false);
-      setConfirmingPurge(false);
-    }
+  async function call(url: string, init?: RequestInit) {
+    const res = await fetch(url, init);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed.");
+    return data;
+  }
+
+  function startUpload(supplier: Supplier) {
+    uploadTarget.current = supplier;
+    fileInputRef.current?.click();
+  }
+
+  function handleUpload(file: File) {
+    const supplier = uploadTarget.current!;
+    run(`Uploading ${supplier.name}'s stock list…`, async () => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("supplierId", supplier.id!);
+      const data = await call("/api/diamond-stock/import", { method: "POST", body: formData });
+      const details: string[] = [];
+      if (data.onHand < data.imported) {
+        details.push(`${(data.imported - data.onHand).toLocaleString()} are on hold / memo and won't show in catalogs.`);
+      }
+      if (data.duplicatesSkipped) {
+        details.push(
+          `Not stored: ${data.duplicatesSkipped.toLocaleString()} stones another supplier already has at the same or lower cost (same certificate number).`
+        );
+      }
+      if (data.displaced) {
+        details.push(
+          `Replaced ${data.displaced.toLocaleString()} other suppliers' copies of the same stones, which this list has available cheaper.`
+        );
+      }
+      if (data.duplicatesInFile) {
+        details.push(`${data.duplicatesInFile.toLocaleString()} certificate numbers appeared twice in this file — stored once.`);
+      }
+      if (data.skipped) details.push(`Skipped ${data.skipped} rows with no shape, carat or price.`);
+      if (data.missingFields.length) {
+        details.push(`No column found for: ${data.missingFields.map((f: string) => FIELD_LABEL[f] ?? f).join(", ")}.`);
+      }
+      if (data.ignoredHeaders.length) details.push(`Columns not used: ${data.ignoredHeaders.join(", ")}.`);
+      return {
+        type: "success",
+        text: `${supplier.name}: imported ${data.imported.toLocaleString()} stones from sheet "${data.sheetName}"${
+          data.replaced ? `, replacing their previous ${data.replaced.toLocaleString()}` : ""
+        }.`,
+        details,
+      };
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function addSupplier(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newSupplier.trim();
+    if (!name) return;
+    run("Adding supplier…", async () => {
+      await call("/api/diamond-stock/suppliers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      setNewSupplier("");
+      return { type: "success", text: `Added ${name}. Upload their stock list from the table.` };
+    });
+  }
+
+  function purgeSupplier(s: Supplier) {
+    setConfirm({
+      title: `Purge ${s.name}'s stones?`,
+      body: (
+        <>
+          This removes {s.count.toLocaleString()} stones from {s.name} — they disappear from{" "}
+          <strong>all public catalogs</strong> right away. Other suppliers&apos; stones stay.
+        </>
+      ),
+      confirmLabel: "Yes, purge",
+      run: () =>
+        run(`Purging ${s.name}…`, async () => {
+          const data = await call(`/api/diamond-stock?supplier=${s.id ?? "unassigned"}`, { method: "DELETE" });
+          return { type: "success", text: `Purged ${data.deleted.toLocaleString()} stones from ${s.name}.` };
+        }),
+    });
+  }
+
+  function deleteSupplier(s: Supplier) {
+    setConfirm({
+      title: `Remove supplier ${s.name}?`,
+      body: s.count ? (
+        <>This also removes their {s.count.toLocaleString()} stones from <strong>all public catalogs</strong>.</>
+      ) : (
+        <>They have no stones on file.</>
+      ),
+      confirmLabel: "Yes, remove",
+      run: () =>
+        run(`Removing ${s.name}…`, async () => {
+          await call(`/api/diamond-stock/suppliers/${s.id}`, { method: "DELETE" });
+          return { type: "success", text: `Removed ${s.name}.` };
+        }),
+    });
+  }
+
+  function assignUnassigned(target: Supplier) {
+    run("Assigning stones…", async () => {
+      const data = await call("/api/diamond-stock", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignUnassignedTo: target.id }),
+      });
+      return { type: "success", text: `Moved ${data.assigned.toLocaleString()} stones under ${target.name}.` };
+    });
+  }
+
+  function purgeAll() {
+    setConfirm({
+      title: "Purge all diamond data?",
+      body: (
+        <>
+          This will remove all {stats?.count.toLocaleString()} stones from every supplier, and therefore from{" "}
+          <strong>all public catalogs</strong>. CAD catalog pricing that relies on certified stones will also fall back
+          to estimates. This can&apos;t be undone.
+        </>
+      ),
+      confirmLabel: "Yes, purge everything",
+      run: () =>
+        run("Purging all stones…", async () => {
+          const data = await call("/api/diamond-stock", { method: "DELETE" });
+          return { type: "success", text: `Purged ${data.deleted.toLocaleString()} stones.` };
+        }),
+    });
   }
 
   const formatDate = (d: string) =>
@@ -68,25 +189,34 @@ export default function DiamondStockPage() {
       day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
     });
 
+  const suppliers = stats?.suppliers ?? [];
+  const named = suppliers.filter((s) => s.id);
+  const disabled = !!busy;
+
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-4xl">
       <div className="mb-6">
         <h1 className="font-serif text-2xl text-[#16283A]">Diamond Stock</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          The certified stone list used to price Solitaire Rings, Three Stone Rings, Solitaire
-          Pendants and Studs over 0.5ct. Re-upload whenever the stock list changes — this replaces
-          the whole list, and existing shared catalog links keep their already-published prices.
+          Certified stones from each supplier, used by the diamond catalogs and to price Solitaire Rings, Three Stone
+          Rings, Solitaire Pendants and Studs over 0.5ct. Uploading a supplier&apos;s list replaces only that
+          supplier&apos;s stones. Each stone is stored only once: if two suppliers list the same certificate number,
+          only the copy that&apos;s available at the lower cost is kept.
         </p>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
-        {loading ? (
+        {loading && !stats ? (
           <p className="text-sm text-gray-400">Loading…</p>
         ) : (
           <div className="flex gap-8">
             <div>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Stones on file</p>
-              <p className="text-2xl font-serif text-[#16283A] mt-1">{stats?.count ?? 0}</p>
+              <p className="text-2xl font-serif text-[#16283A] mt-1">{(stats?.count ?? 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Suppliers</p>
+              <p className="text-2xl font-serif text-[#16283A] mt-1">{named.length}</p>
             </div>
             <div>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Last imported</p>
@@ -98,6 +228,7 @@ export default function DiamondStockPage() {
         )}
       </div>
 
+      {busy && <p className="mb-4 text-sm text-[#3E86C6]">{busy}</p>}
       {message && (
         <div
           className={`mb-4 text-sm rounded-lg px-4 py-3 border ${
@@ -106,71 +237,179 @@ export default function DiamondStockPage() {
               : "text-red-700 bg-red-50 border-red-200"
           }`}
         >
-          {message.text}
+          <p>{message.text}</p>
+          {!!message.details?.length && (
+            <ul className="mt-1.5 list-disc pl-5 text-gray-600 space-y-0.5">
+              {message.details.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          Upload stock list (.xlsx)
-        </label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          disabled={uploading}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleUpload(file);
-          }}
-          className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#3E86C6] file:text-white hover:file:bg-[#2f6fa8] disabled:opacity-60"
-        />
-        <p className="text-xs text-gray-400 mt-2">
-          Expects the same columns as the standard stock export — Shape, Carat, Rate, Measurement,
-          etc. Rows missing Shape, Carat or Rate are skipped.
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleUpload(file);
+        }}
+      />
+
+      <div className="bg-white border border-gray-200 rounded-xl mb-5 overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Suppliers</p>
+        </div>
+        {suppliers.length === 0 ? (
+          <p className="px-5 pb-5 text-sm text-gray-400">No suppliers yet — add one below, then upload their stock list.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] text-gray-500 uppercase tracking-wide border-y border-gray-100 bg-gray-50">
+                  <th className="px-5 py-2 font-semibold">Supplier</th>
+                  <th className="px-3 py-2 font-semibold text-right">Stones</th>
+                  <th className="px-3 py-2 font-semibold text-right">Shown</th>
+                  <th className="px-3 py-2 font-semibold">Last imported</th>
+                  <th className="px-5 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {suppliers.map((s) => (
+                  <tr key={s.id ?? "unassigned"} className="border-b border-gray-100 last:border-0">
+                    <td className="px-5 py-3">
+                      <p className={s.id ? "text-[#16283A] font-medium" : "text-gray-500 italic"}>{s.name}</p>
+                      {!s.id && <p className="text-xs text-gray-400">Uploaded before suppliers existed</p>}
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums">{s.count.toLocaleString()}</td>
+                    <td className="px-3 py-3 text-right tabular-nums" title="On hand — shown in catalogs">
+                      {s.shown.toLocaleString()}
+                    </td>
+                    <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
+                      {s.lastImportedAt ? formatDate(s.lastImportedAt) : "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-2 whitespace-nowrap">
+                        {s.id ? (
+                          <>
+                            <button
+                              onClick={() => startUpload(s)}
+                              disabled={disabled}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#3E86C6] text-white hover:bg-[#2f6fa8] transition disabled:opacity-50"
+                            >
+                              Upload list
+                            </button>
+                            <button
+                              onClick={() => purgeSupplier(s)}
+                              disabled={disabled || !s.count}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition disabled:opacity-40"
+                            >
+                              Purge
+                            </button>
+                            <button
+                              onClick={() => deleteSupplier(s)}
+                              disabled={disabled}
+                              title="Remove supplier"
+                              className="px-2 py-1.5 text-xs rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-40"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {named.length > 0 && (
+                              <select
+                                value=""
+                                disabled={disabled}
+                                onChange={(e) => {
+                                  const target = named.find((n) => n.id === e.target.value);
+                                  if (target) assignUnassigned(target);
+                                }}
+                                className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 bg-white disabled:opacity-50"
+                              >
+                                <option value="">Assign to…</option>
+                                {named.map((n) => (
+                                  <option key={n.id} value={n.id!}>
+                                    {n.name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              onClick={() => purgeSupplier(s)}
+                              disabled={disabled}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition disabled:opacity-40"
+                            >
+                              Purge
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <form onSubmit={addSupplier} className="flex gap-2 px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <input
+            value={newSupplier}
+            onChange={(e) => setNewSupplier(e.target.value)}
+            placeholder="New supplier name, e.g. Nishal Gems"
+            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#3E86C6]"
+          />
+          <button
+            type="submit"
+            disabled={disabled || !newSupplier.trim()}
+            className="px-4 py-2 text-sm font-semibold rounded-lg border border-[#3E86C6] text-[#3E86C6] hover:bg-[#3E86C6]/5 transition disabled:opacity-40"
+          >
+            Add supplier
+          </button>
+        </form>
+        <p className="px-5 pb-4 bg-gray-50/50 text-xs text-gray-400">
+          Any supplier&apos;s Excel layout works — columns are recognised by name (Carat / Size / Cts, Rate / Per Carat,
+          Cert Number / Report No, …). After each upload you&apos;ll see which columns weren&apos;t used, so you can check a
+          new supplier&apos;s sheet came through properly. Rows missing shape, carat or price are skipped.
         </p>
-        {uploading && <p className="text-sm text-[#3E86C6] mt-3">Uploading and replacing stock list…</p>}
       </div>
-      <div className="bg-white border border-red-200 rounded-xl p-5 mt-5">
+
+      <div className="bg-white border border-red-200 rounded-xl p-5">
         <p className="text-[11px] font-semibold text-red-600 uppercase tracking-wide mb-1">Danger zone</p>
-        <p className="text-sm text-gray-600 mb-3">
-          Remove every stone from the database — for example before uploading a fresh stock list.
-        </p>
+        <p className="text-sm text-gray-600 mb-3">Remove every stone from every supplier.</p>
         <button
-          onClick={() => setConfirmingPurge(true)}
-          disabled={loading || !stats?.count || uploading}
+          onClick={purgeAll}
+          disabled={loading || !stats?.count || disabled}
           className="px-4 py-2 text-sm font-semibold rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Purge all diamond data
         </button>
       </div>
 
-      {confirmingPurge && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !purging && setConfirmingPurge(false)}>
+      {confirm && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirm(null)}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-serif text-xl text-[#16283A] mb-2">Purge all diamond data?</h2>
-            <p className="text-sm text-gray-600">
-              This will remove all {stats?.count.toLocaleString()} stones from the database, and therefore from{" "}
-              <strong>all public catalogs</strong>. If you have shared a catalog link with someone, they might not see any
-              diamonds until you upload new stock.
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              CAD catalog pricing that relies on certified stones will also fall back to estimates. This can&apos;t be undone.
-            </p>
+            <h2 className="font-serif text-xl text-[#16283A] mb-2">{confirm.title}</h2>
+            <p className="text-sm text-gray-600">{confirm.body}</p>
             <div className="flex justify-end gap-2 mt-5">
               <button
-                onClick={() => setConfirmingPurge(false)}
-                disabled={purging}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+                onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handlePurge}
-                disabled={purging}
-                className="px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-60"
+                onClick={() => {
+                  const c = confirm;
+                  setConfirm(null);
+                  c.run();
+                }}
+                className="px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
               >
-                {purging ? "Purging…" : "Yes, purge everything"}
+                {confirm.confirmLabel}
               </button>
             </div>
           </div>

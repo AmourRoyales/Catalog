@@ -25,7 +25,7 @@ export const CUT_GRADE_LABEL: Record<string, string> = {
   ID: "Ideal", EX: "Excellent", VG: "Very Good", GD: "Good", FR: "Fair", PR: "Poor", "-": "Not graded",
 };
 export const FLUORESCENCE_LABEL: Record<string, string> = {
-  NON: "None", SL: "Slight", VSL: "Very Slight", STG: "Strong",
+  NON: "None", FNT: "Faint", SL: "Slight", VSL: "Very Slight", MED: "Medium", STG: "Strong", VST: "Very Strong",
 };
 export const GROWTH_TYPE_OPTIONS = ["CVD", "HPHT", "Other"];
 

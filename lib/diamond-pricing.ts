@@ -276,7 +276,7 @@ export type StoredPricingFields = {
 
 /**
  * Runs the same pricing engine as withAdminPricing/withPublicPricing, but at
- * import time (lib/cad-stock.ts excelRowToStockRow, via the import route) so
+ * import time (lib/diamond-stock-import.ts, via the import route) so
  * the catalog price is recorded on the diamond_stock document itself instead
  * of only ever existing as a read-time calculation. `rate`/`amount` on the
  * document stay the landed cost exactly as imported — untouched here — this

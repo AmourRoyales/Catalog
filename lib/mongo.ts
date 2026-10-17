@@ -34,6 +34,10 @@ async function ensureIndexes(db: Db) {
     // stock grows.
     db.collection("diamond_stock").createIndex({ stone_stage: 1, amount: 1 }),
     db.collection("diamond_stock").createIndex({ stone_stage: 1, carat: 1 }),
+    // Per-supplier replace/purge, and same-certificate dedupe across suppliers.
+    db.collection("diamond_stock").createIndex({ supplier_id: 1 }),
+    db.collection("diamond_stock").createIndex({ cert_key: 1 }),
+    db.collection("diamond_suppliers").createIndex({ name: 1 }, { unique: true, collation: { locale: "en", strength: 2 } }),
   ]);
 }
 

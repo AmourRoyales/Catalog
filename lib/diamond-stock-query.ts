@@ -69,8 +69,8 @@ function dominantHue(c: string): string | null {
 const escapeRegex = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function buildQuery(filters: DiamondFilters): Filter<any> {
-  // Always-on: only stones actually on hand (excludes the 'TRF' — transferred
-  // out — rows, which aren't available stock).
+  // Always-on: only stones actually on hand (excludes transferred-out,
+  // memo and on-hold rows, which aren't available stock).
   const q: Record<string, any> = { stone_stage: "OH" };
   const and: Record<string, any>[] = [];
 
