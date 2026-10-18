@@ -24,12 +24,14 @@ function Media({ m, className, play }: { m: ThumbMedia; className: string; play?
 }
 
 export default function ProductThumb({
-  media, name, code,
+  media, name, code, card = false,
 }: {
   /** The product's media in display order; the first is the cover. */
   media: ThumbMedia[];
   name: string;
   code: string;
+  /** Fill a card's whole image area (no hover pop-out — the image is already large). */
+  card?: boolean;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [hover, setHover] = useState<{ top: number; left: number } | null>(null);
@@ -49,7 +51,7 @@ export default function ProductThumb({
   }, [open, media.length]);
 
   function showHover() {
-    if (!cover || !window.matchMedia("(hover: hover)").matches) return;
+    if (card || !cover || !window.matchMedia("(hover: hover)").matches) return;
     const r = ref.current!.getBoundingClientRect();
     // Beside the thumbnail, flipped to the left near the right edge, and
     // kept inside the viewport vertically.
@@ -68,7 +70,11 @@ export default function ProductThumb({
         onMouseLeave={() => setHover(null)}
         disabled={!cover}
         aria-label={cover ? `Preview ${name}` : undefined}
-        className="relative w-12 h-12 rounded-lg bg-page overflow-hidden shrink-0 cursor-zoom-in disabled:cursor-default ring-[#3E86C6]/60 hover:ring-2 transition"
+        className={
+          card
+            ? "relative block w-full aspect-square bg-placeholder overflow-hidden cursor-zoom-in disabled:cursor-default"
+            : "relative w-12 h-12 rounded-lg bg-page overflow-hidden shrink-0 cursor-zoom-in disabled:cursor-default ring-[#3E86C6]/60 hover:ring-2 transition"
+        }
       >
         {cover && <Media m={cover} className="w-full h-full object-cover" />}
         {cover?.media_type === "video" && (

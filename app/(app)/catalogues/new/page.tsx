@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import ProductThumb, { type ThumbMedia } from "@/components/ProductThumb";
+import ProductCard from "@/components/ProductCard";
+import type { ThumbMedia } from "@/components/ProductThumb";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, SUBCATEGORIES, STONE_SHAPES } from "@/lib/jewelry-options";
 
@@ -292,7 +293,7 @@ export default function NewCataloguePage() {
             </div>
           </div>
 
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="h-[65vh] min-h-[420px] overflow-y-auto">
             {loading ? (
               <p className="p-4 text-sm text-gray-400">Loading…</p>
             ) : available.length === 0 ? (
@@ -302,31 +303,25 @@ export default function NewCataloguePage() {
                   : "No products match — or all are already added."}
               </p>
             ) : (
-              available.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50 transition"
-                >
-                  <ProductThumb media={p.media} name={p.name} code={p.product_code} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-ink truncate">
-                      {p.name}
-                    </p>
-                    <p className="text-[11px] text-gray-400 truncate">
-                      {p.product_code} · {catLabel(p.category)}
-                      {p.subcategory ? ` · ${p.subcategory}` : ""}
-                      {p.stone_shape ? ` · ${p.stone_shape}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => add(p.id)}
-                    className="text-lg text-[#3E86C6] font-bold px-2 hover:scale-125 transition"
-                    title="Add to catalogue"
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3">
+                {available.map((p) => (
+                  <ProductCard
+                    key={p.id}
+                    media={p.media}
+                    name={p.name}
+                    code={p.product_code}
+                    meta={[catLabel(p.category), p.subcategory, p.stone_shape].filter(Boolean).join(" · ")}
                   >
-                    +
-                  </button>
-                </div>
-              ))
+                    <button
+                      onClick={() => add(p.id)}
+                      className="flex-1 py-1.5 rounded-md text-xs font-semibold text-white bg-[#3E86C6] hover:bg-[#2f6fa8] transition"
+                      title="Add to catalogue"
+                    >
+                      + Add
+                    </button>
+                  </ProductCard>
+                ))}
+              </div>
             )}
           </div>
 
@@ -353,56 +348,49 @@ export default function NewCataloguePage() {
             </span>
           </div>
 
-          <div className="max-h-[460px] overflow-y-auto">
+          <div className="h-[calc(65vh+5.5rem)] min-h-[508px] overflow-y-auto">
             {selected.length === 0 ? (
               <p className="p-4 text-sm text-gray-400">
                 Nothing here yet — add products from the left panel.
               </p>
             ) : (
-              selected.map((p, i) => (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50"
-                >
-                  <span className="text-[11px] text-gray-300 w-5 text-right shrink-0">
-                    {i + 1}
-                  </span>
-                  <ProductThumb media={p.media} name={p.name} code={p.product_code} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-ink truncate">
-                      {p.name}
-                    </p>
-                    <p className="text-[11px] text-gray-400 truncate">
-                      {p.product_code}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3">
+                {selected.map((p, i) => (
+                  <ProductCard
+                    key={p.id}
+                    media={p.media}
+                    name={p.name}
+                    code={p.product_code}
+                    corner={i + 1}
+                  >
                     <button
                       onClick={() => move(p.id, -1)}
                       disabled={i === 0}
-                      className="text-xs text-gray-400 hover:text-ink px-1 disabled:opacity-20 transition"
-                      title="Move up"
+                      className="w-7 py-1 rounded-md text-xs text-gray-500 border border-gray-200 hover:text-ink hover:border-gray-300 disabled:opacity-30 transition"
+                      title="Move earlier"
+                      aria-label="Move earlier"
                     >
-                      ▲
+                      ◀
                     </button>
                     <button
                       onClick={() => move(p.id, 1)}
                       disabled={i === selected.length - 1}
-                      className="text-xs text-gray-400 hover:text-ink px-1 disabled:opacity-20 transition"
-                      title="Move down"
+                      className="w-7 py-1 rounded-md text-xs text-gray-500 border border-gray-200 hover:text-ink hover:border-gray-300 disabled:opacity-30 transition"
+                      title="Move later"
+                      aria-label="Move later"
                     >
-                      ▼
+                      ▶
                     </button>
                     <button
                       onClick={() => remove(p.id)}
-                      className="text-lg text-red-400 font-bold px-1.5 hover:text-red-600 transition"
-                      title="Remove"
+                      className="ml-auto px-2 py-1 rounded-md text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition"
+                      title="Remove from catalogue"
                     >
-                      −
+                      Remove
                     </button>
-                  </div>
-                </div>
-              ))
+                  </ProductCard>
+                ))}
+              </div>
             )}
           </div>
         </div>
