@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser, unauthorized } from "@/lib/auth";
 import { getDb } from "@/lib/mongo";
 import { getSupplierStats, type SupplierDoc } from "@/lib/diamond-suppliers";
+import { bumpStockVersion } from "@/lib/diamond-stock-query";
 
 // Stats (total + per supplier) for the admin upload page.
 export async function GET() {
@@ -33,6 +34,7 @@ export async function DELETE(request: Request) {
 
   const db = await getDb();
   const { deletedCount } = await db.collection("diamond_stock").deleteMany(filter);
+  await bumpStockVersion(db);
   return NextResponse.json({ deleted: deletedCount });
 }
 
@@ -52,5 +54,6 @@ export async function PATCH(request: Request) {
   const { modifiedCount } = await db
     .collection("diamond_stock")
     .updateMany({ supplier_id: { $exists: false } }, { $set: { supplier_id: supplier._id, supplier_name: supplier.name } });
+  await bumpStockVersion(db);
   return NextResponse.json({ assigned: modifiedCount });
 }

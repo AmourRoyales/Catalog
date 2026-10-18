@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getDb } from "@/lib/mongo";
+import { stoneVideoAvailable } from "@/lib/media-check";
 
 // Public, unauthenticated, video-only share link for a single stone — what
 // the "Open video in new tab" / "Copy video link" buttons in StoneDetail
@@ -10,6 +11,7 @@ import { getDb } from "@/lib/mongo";
 // location or certificate data ever reaches it.
 
 type VideoStone = {
+  _id: unknown; video_ok?: boolean;
   stone_id: string; shape: string; carat: number; color: string; clarity: string;
   video_link: string | null;
 };
@@ -24,10 +26,13 @@ async function getStone(rawId: string) {
   } catch {}
   const db = await getDb();
   // Same always-on rule as the catalogs: only stones actually on hand.
-  return db.collection("diamond_stock").findOne<VideoStone>(
+  const stone = await db.collection("diamond_stock").findOne<VideoStone>(
     { stone_id: stoneId, stone_stage: "OH", video_link: { $nin: [null, ""] } },
-    { projection: { _id: 0, stone_id: 1, shape: 1, carat: 1, color: 1, clarity: 1, video_link: 1 } }
+    { projection: { stone_id: 1, shape: 1, carat: 1, color: 1, clarity: 1, video_link: 1, video_ok: 1, image_link: 1, image_ok: 1, cert_link: 1 } }
   );
+  // A link on file isn't enough — suppliers link a viewer even for stones
+  // they never filmed (see lib/media-check.ts).
+  return stone && (await stoneVideoAvailable(db, stone)) ? stone : null;
 }
 
 export async function generateMetadata({ params }: { params: { stoneId: string } }): Promise<Metadata> {

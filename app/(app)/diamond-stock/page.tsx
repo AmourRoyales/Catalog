@@ -35,8 +35,43 @@ export default function DiamondStockPage() {
     setLoading(false);
   }
 
+  // Photo/video checks (lib/media-check.ts) run in batches from this page
+  // while it's open — after an upload, or to finish a check left running.
+  const [mediaRemaining, setMediaRemaining] = useState<number | null>(null);
+  const [mediaPaused, setMediaPaused] = useState(false);
+  const mediaRunning = useRef(false);
+  const mounted = useRef(true);
+
+  async function checkMedia() {
+    if (mediaRunning.current) return;
+    mediaRunning.current = true;
+    setMediaPaused(false);
+    try {
+      const first = await fetch("/api/diamond-stock/verify-media");
+      if (!first.ok) throw new Error();
+      let { remaining } = (await first.json()) as { remaining: number };
+      setMediaRemaining(remaining);
+      while (remaining > 0 && mounted.current) {
+        const res = await fetch("/api/diamond-stock/verify-media", { method: "POST" });
+        if (!res.ok) throw new Error();
+        ({ remaining } = (await res.json()) as { remaining: number });
+        setMediaRemaining(remaining);
+      }
+    } catch {
+      setMediaPaused(true);
+    } finally {
+      mediaRunning.current = false;
+    }
+  }
+
   useEffect(() => {
+    mounted.current = true;
     loadStats();
+    checkMedia();
+    return () => {
+      mounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function run(label: string, action: () => Promise<Message>) {
@@ -45,6 +80,7 @@ export default function DiamondStockPage() {
     try {
       setMessage(await action());
       await loadStats();
+      checkMedia();
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Something went wrong." });
     } finally {
@@ -228,6 +264,27 @@ export default function DiamondStockPage() {
         )}
       </div>
 
+      {!!mediaRemaining && (
+        <div className="mb-4 text-sm rounded-lg px-4 py-3 border border-[#3E86C6]/30 bg-tint text-ink flex items-center justify-between gap-4">
+          <p>
+            {mediaPaused ? "Photo & video check paused" : "Checking photos & videos"} —{" "}
+            <strong>{mediaRemaining.toLocaleString()}</strong> stones left.
+            <span className="text-gray-500">
+              {" "}
+              Keep this page open until it finishes. Stones keep showing their media until they&apos;re checked; then
+              catalogs list stones with working photos or videos first.
+            </span>
+          </p>
+          {mediaPaused && (
+            <button
+              onClick={checkMedia}
+              className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#3E86C6] text-white hover:bg-[#2f6fa8] transition"
+            >
+              Resume
+            </button>
+          )}
+        </div>
+      )}
       {busy && <p className="mb-4 text-sm text-[#3E86C6]">{busy}</p>}
       {message && (
         <div

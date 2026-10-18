@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import DiamondExplorer from "@/components/diamond/DiamondExplorer";
 import { ThemeMenu } from "@/components/ThemeToggle";
 import type { StockRow } from "@/components/diamond/StoneDetail";
+import type { Facets } from "@/components/diamond/DiamondFilterPanel";
 
 export type { StockRow };
 
@@ -18,9 +19,9 @@ const GENERIC_DIAMOND_FAVICON =
   );
 
 export default function DiamondCatalogViewer({
-  code, name, showPrice, showBranding, initialRows, total,
+  code, name, showPrice, showBranding, initialRows, total, facets,
 }: {
-  code: string; name: string; showPrice: boolean; showBranding: boolean; initialRows: StockRow[]; total: number;
+  code: string; name: string; showPrice: boolean; showBranding: boolean; initialRows: StockRow[]; total: number; facets: Facets;
 }) {
   useEffect(() => {
     document.title = showBranding ? `${name} — JeniDiam` : name;
@@ -60,6 +61,7 @@ export default function DiamondCatalogViewer({
         heightClass="h-[calc(100vh-4.25rem)] sm:h-[calc(100vh-4.75rem)]"
         initialRows={initialRows}
         initialTotal={total}
+        initialFacets={facets}
       />
 
       {showBranding && (

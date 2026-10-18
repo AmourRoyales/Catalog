@@ -3,7 +3,7 @@
 // Single-stone detail modal — shared by the public catalog viewer
 // (app/diamonds/[code]) and the in-app View Diamonds page, so both show the
 // exact same thing.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { PRICING_PROFILE } from "@/lib/diamond-pricing";
 
@@ -17,6 +17,8 @@ export type StockRow = {
   girdle: string | null; culet: string | null; shade: string | null; eye_clean: string | null;
   growth_type: string | null; report_no: string | null;
   image_link: string | null; video_link: string | null; cert_link: string | null;
+  /** Result of the server's video check, once it has run (lib/media-check.ts). */
+  video_ok?: boolean;
   // Present only on admin-facing rows (the builder / View Diamonds), never
   // on public ones — see lib/diamond-pricing.ts withAdminPricing/withPublicPricing.
   // rate/amount are always the catalog (sell) price; these are the landed
@@ -38,12 +40,36 @@ const num = (v: number | null, suffix = "") => (v == null ? "—" : `${v}${suffi
 type Tab = "image" | "video" | "cert";
 
 export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; showPrice: boolean; onClose: () => void }) {
-  const tabs: { key: Tab; label: string; available: boolean }[] = [
-    { key: "image", label: "Image", available: !!r.image_link },
-    { key: "video", label: "Video", available: !!r.video_link },
+  // Media that doesn't actually load isn't shown at all. Links already
+  // checked and found dead never reach here (the server blanks them).
+  // Images: the browser tells us (onError). Videos: suppliers link a viewer
+  // for every stone, filmed or not, so a stone not yet checked asks the
+  // server — the tab only appears once the video is confirmed.
+  const [imageOk, setImageOk] = useState(!!r.image_link);
+  const [videoOk, setVideoOk] = useState(!!r.video_link && r.video_ok === true);
+  useEffect(() => {
+    setVideoOk(!!r.video_link && r.video_ok === true);
+    if (!r.video_link || typeof r.video_ok === "boolean") return;
+    let live = true;
+    fetch(`/api/diamonds/stone-video/${encodeURIComponent(r.id)}`)
+      .then((res) => (res.ok ? res.json() : { video: false }))
+      .then((d: { video?: boolean }) => live && setVideoOk(!!d.video))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [r.id, r.video_link, r.video_ok]);
+
+  const tabs = ([
+    { key: "image", label: "Image", available: imageOk },
+    { key: "video", label: "Video", available: videoOk },
     { key: "cert", label: "Certificate", available: !!r.cert_link },
-  ];
-  const [tab, setTab] = useState<Tab>(tabs.find((t) => t.available)?.key ?? "image");
+  ] as { key: Tab; label: string; available: boolean }[]).filter((t) => t.available);
+  const [picked, setPicked] = useState<Tab | null>(null);
+  // The picked tab if it's (still) available, else the first that is —
+  // e.g. the image failing to load moves the view on to the video.
+  const tab: Tab | null = tabs.find((t) => t.key === picked)?.key ?? tabs[0]?.key ?? null;
+  const setTab = setPicked;
   const isMp4 = !!r.video_link && /\.(mp4|webm|mov)(\?|$)/i.test(r.video_link);
   // Public video-only page (app/video/[stoneId]) — safe to send to a customer.
   const videoPath = `/video/${encodeURIComponent(r.stone_id)}`;
@@ -92,10 +118,10 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
   const [detailsOpen, setDetailsOpen] = useState(true);
 
   const thumbIcon: Record<Tab, React.ReactNode> = {
-    image: r.image_link ? <img src={r.image_link} alt="" className="w-full h-full object-cover" /> : <span className="text-gray-400 text-xs">Image</span>,
+    image: r.image_link ? <img src={r.image_link} alt="" onError={() => setImageOk(false)} className="w-full h-full object-cover" /> : null,
     video: (
       <div className="relative w-full h-full bg-gray-500 flex items-center justify-center">
-        {r.image_link && <img src={r.image_link} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />}
+        {imageOk && r.image_link && <img src={r.image_link} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />}
         <span className="relative w-7 h-7 rounded-full bg-surface flex items-center justify-center text-gray-600 text-xs">▶</span>
       </div>
     ),
@@ -118,11 +144,8 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
               {tabs.map((t) => (
                 <button
                   key={t.key}
-                  disabled={!t.available}
                   onClick={() => setTab(t.key)}
-                  className={`w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-lg overflow-hidden border-2 bg-surface flex items-center justify-center ${
-                    t.available ? "" : "opacity-30 cursor-not-allowed"
-                  }`}
+                  className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-lg overflow-hidden border-2 bg-surface flex items-center justify-center"
                   style={{ borderColor: tab === t.key ? BLUE : "transparent" }}
                   title={t.label}
                 >
@@ -132,24 +155,39 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
             </div>
             <div className="flex-1 min-w-0">
               <div className="aspect-square bg-placeholder-3 rounded-lg overflow-hidden flex items-center justify-center">
-                {tab === "image" &&
-                  (r.image_link ? <img src={r.image_link} alt={r.stone_id} className="w-full h-full object-contain" /> : <span className="text-gray-400 text-sm">No image</span>)}
+                {tab === null && <span className="text-gray-400 text-sm">No image or video</span>}
+                {tab === "image" && r.image_link && (
+                  <img src={r.image_link} alt={r.stone_id} onError={() => setImageOk(false)} className="w-full h-full object-contain" />
+                )}
                 {tab === "video" &&
                   (r.video_link ? (
                     isMp4 ? (
-                      <video key={r.video_link} src={r.video_link} controls autoPlay loop playsInline className="w-full h-full object-contain" />
+                      <video key={r.video_link} src={r.video_link} controls autoPlay loop playsInline onError={() => setVideoOk(false)} className="w-full h-full object-contain" />
                     ) : (
                       <iframe src={r.video_link} title="360° video" className="w-full h-full bg-surface" allow="fullscreen" />
                     )
                   ) : (
                     <span className="text-gray-400 text-sm">No video</span>
                   ))}
-                {tab === "cert" &&
-                  (r.cert_link ? (
-                    <iframe src={r.cert_link} title={`${r.cert} certificate`} className="w-full h-full bg-surface" />
-                  ) : (
-                    <span className="text-gray-400 text-sm">No certificate</span>
-                  ))}
+                {/* Labs (IGI, GIA) don't allow their report pages inside other
+                    sites, so the certificate opens in a new tab instead. */}
+                {tab === "cert" && r.cert_link && (
+                  <div className="flex flex-col items-center text-center px-6">
+                    <svg viewBox="0 0 24 24" className="w-14 h-14 text-ink" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="4" y="3" width="14" height="14" rx="1.5" /><path d="M8 7h6M8 10h6" /><circle cx="16" cy="17" r="3" /><path d="M14.5 19.5 14 23l2-1 2 1-.5-3.5" />
+                    </svg>
+                    <p className="mt-4 text-lg font-semibold text-ink">{r.cert} certified</p>
+                    {r.report_no && <p className="mt-1 text-sm text-gray-500">Report # {r.report_no}</p>}
+                    <a
+                      href={r.cert_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-5 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#3E86C6] hover:bg-[#2f6fa8] transition"
+                    >
+                      View certificate ↗
+                    </a>
+                  </div>
+                )}
               </div>
               {tab === "video" && r.video_link && (
                 <div className="flex items-center gap-4 mt-2">
@@ -160,11 +198,6 @@ export default function StoneDetail({ r, showPrice, onClose }: { r: StockRow; sh
                     {copied ? "Link copied ✓" : "Copy video link"}
                   </button>
                 </div>
-              )}
-              {tab === "cert" && r.cert_link && (
-                <a href={r.cert_link} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-2 inline-block" style={{ color: BLUE }}>
-                  Open certificate in new tab ↗
-                </a>
               )}
             </div>
           </div>

@@ -19,7 +19,9 @@ function filterSummary(f: DiamondFilters): string {
   const parts: string[] = [];
   if (f.shapes?.length) parts.push(f.shapes.join("/"));
   if (f.caratMin != null || f.caratMax != null) parts.push(`${f.caratMin ?? "0"}-${f.caratMax ?? "∞"}ct`);
-  if (f.colorMode) parts.push(f.colorMode);
+  if (f.colors?.length) parts.push(f.colors.join("/"));
+  if (f.fancyHues?.length) parts.push(f.fancyHues.join("/"));
+  if (!f.colors?.length && !f.fancyHues?.length && f.colorMode) parts.push(f.colorMode);
   if (f.clarities?.length) parts.push(f.clarities.join("/"));
   if (f.labs?.length) parts.push(f.labs.join("/"));
   return parts.length ? parts.join(" · ") : "All stock";

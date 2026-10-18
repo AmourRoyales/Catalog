@@ -3,8 +3,11 @@
 // (which re-runs the saved filter against CURRENT stock on every view, per
 // the "live filtered link" design). diamond_stock is only reachable through
 // this module — callers must do their own auth checks.
-import type { Filter } from "mongodb";
+import { createHash } from "crypto";
+import type { Db, Filter } from "mongodb";
 import { getDb, serialize } from "@/lib/mongo";
+import { PRICING_PROFILE, priceStockRowForStorage } from "@/lib/diamond-pricing";
+import { checkUncheckedOnPage, mediaRank } from "@/lib/media-check";
 
 export type DiamondFilters = {
   /** IGI/GIA/etc. certificate (report) number — free-text, partial match. Admin-only: never exposed on the public catalog UI or accepted from public filter input. */
@@ -12,7 +15,7 @@ export type DiamondFilters = {
   shapes?: string[];
   caratMin?: number;
   caratMax?: number;
-  colorMode?: "white" | "fancy"; // omitted = both
+  colorMode?: "white" | "fancy"; // omitted = both ("All"); colors / fancyHues picked there match either
   colors?: string[]; // White tab: literal grade letters ("D", "E", ... or a range like "O-P")
   fancyHues?: string[]; // Fancy tab: dominant hue family ("Yellow", "Pink", ...), matched via the fancy_hue derived column
   noBgm?: boolean;
@@ -52,9 +55,23 @@ export const PUBLIC_STOCK_COLUMNS = [
   "cut", "polish", "symm", "fls", "cert", "rate", "amount", "measurement",
   "length_mm", "width_mm", "depth_mm", "table_pct", "depth_pct", "ratio", "ca", "ch", "pa", "ph",
   "girdle", "culet", "shade", "eye_clean", "growth_type", "location",
-  "report_no", "image_link", "video_link", "cert_link",
+  "report_no", "image_link", "video_link", "cert_link", "video_ok",
 ];
-const PUBLIC_PROJECTION = Object.fromEntries(PUBLIC_STOCK_COLUMNS.map((c) => [c, 1]));
+// image_ok is read only to blank out a dead image link, media_checked_at /
+// media_attempts only to spot stones not checked yet (see runQuery) — none
+// of them is sent out.
+const PUBLIC_PROJECTION = Object.fromEntries(
+  [...PUBLIC_STOCK_COLUMNS, "image_ok", "media_checked_at", "media_attempts"].map((c) => [c, 1])
+);
+
+/** Links whose media was checked and found missing (lib/media-check.ts) are never sent to a page. */
+function toPublicRow(doc: Record<string, unknown>): Record<string, unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { image_ok, media_checked_at, media_attempts, ...row } = serialize(doc as { _id?: unknown }) as Record<string, unknown>;
+  if (image_ok === false) row.image_link = null;
+  if (row.video_ok === false) row.video_link = null;
+  return row;
+}
 
 const WHITE_GRADE_REGEX = "^[D-Za-z](-[D-Za-z])?$";
 
@@ -88,20 +105,27 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
   // "O-P". Fancy = everything else, matched by DOMINANT hue = the LAST word,
   // so "Yellow" matches "Fancy Vivid Yellow" / "Light Yellow" but not
   // "Fancy Yellowish Green".
-  if (filters.colorMode === "white") {
+  const hueMatch = (h: string) => ({ color: { $regex: `\\s${escapeRegex(h)}$`, $options: "i" } });
+  if (!filters.colorMode && (filters.colors?.length || filters.fancyHues?.length)) {
+    // "All" tab with some white grades and/or fancy hues picked: either kind matches.
+    and.push({
+      $or: [
+        ...(filters.colors?.length ? [{ color: { $in: filters.colors } }] : []),
+        ...(filters.fancyHues ?? []).map(hueMatch),
+      ],
+    });
+  } else if (filters.colorMode === "white") {
     q.color = filters.colors?.length ? { $in: filters.colors } : { $regex: WHITE_GRADE_REGEX };
   } else if (filters.colorMode === "fancy") {
     if (filters.fancyHues?.length) {
-      and.push({ $or: filters.fancyHues.map((h) => ({ color: { $regex: `\\s${escapeRegex(h)}$`, $options: "i" } })) });
+      and.push({ $or: filters.fancyHues.map(hueMatch) });
     } else {
       and.push({ color: { $not: new RegExp(WHITE_GRADE_REGEX) } });
       and.push({ color: { $ne: null } });
     }
   }
   if (filters.noBgm) q.shade = "NO BGM";
-  if (filters.withMedia) {
-    and.push({ $or: [{ image_link: { $nin: [null, ""] } }, { video_link: { $nin: [null, ""] } }] });
-  }
+  if (filters.withMedia) q.media_rank = 0; // a photo or video that actually loads
 
   if (filters.clarities?.length) q.clarity = { $in: filters.clarities };
   if (filters.eyeClean) q.eye_clean = "YES";
@@ -117,7 +141,9 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
     if (min == null && max == null) return;
     q[field] = { ...(min != null ? { $gte: min } : {}), ...(max != null ? { $lte: max } : {}) };
   };
-  range(filters.priceMode === "per_ct" ? "rate" : "amount", filters.priceMin, filters.priceMax);
+  // The price customers see is the catalog (sell) price, so that's what the
+  // price filter matches — not the landed cost in rate/amount.
+  range(filters.priceMode === "per_ct" ? "catalog_rate" : "catalog_amount", filters.priceMin, filters.priceMax);
 
   if (filters.locations?.length) {
     q.location = filters.excludeLocations ? { $nin: filters.locations } : { $in: filters.locations };
@@ -134,14 +160,120 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
   return q;
 }
 
-// Carat and (total) price, each ascending or descending — the two sort
-// dimensions the builder/public results grid exposes. `_id` is always the
-// tiebreaker, for stable pagination when many stones share a value.
+// ---------------------------------------------------------------------
+// Keeping stored fields current
+// ---------------------------------------------------------------------
+
+/**
+ * Identifies the pricing rules each doc's catalog_rate / catalog_amount were
+ * computed with. Bump PRICING_ENGINE_REVISION when the pricing *code* (not
+ * just PRICING_PROFILE numbers) changes the result.
+ */
+const PRICING_ENGINE_REVISION = 1;
+export const PRICING_VERSION = createHash("sha1")
+  .update(JSON.stringify({ PRICING_PROFILE, PRICING_ENGINE_REVISION }))
+  .digest("hex")
+  .slice(0, 12);
+
+const READY_BATCH = 1000;
+let readyPromise: Promise<void> | null = null;
+
+/**
+ * Catalog sorting and price filtering run on the stored catalog_amount /
+ * catalog_rate and media_rank. Once per server process, re-price docs
+ * priced under older rules (i.e. after a PRICING_PROFILE change is
+ * deployed) and fill media_rank on docs that predate it. Cheap no-op when
+ * everything is current.
+ */
+export function ensureStockReady(db: Db): Promise<void> {
+  readyPromise ??= (async () => {
+    const col = db.collection("diamond_stock");
+    for (;;) {
+      const stale = await col
+        .find({ pricing_version: { $ne: PRICING_VERSION } }, { projection: { rate: 1, amount: 1, carat: 1, color: 1, clarity: 1 } })
+        .limit(READY_BATCH)
+        .toArray();
+      if (!stale.length) break;
+      await col.bulkWrite(
+        stale.map((d) => ({
+          updateOne: {
+            filter: { _id: d._id },
+            update: {
+              $set: {
+                ...priceStockRowForStorage({
+                  rate: Number(d.rate), amount: Number(d.amount), carat: Number(d.carat),
+                  color: String(d.color ?? ""), clarity: String(d.clarity ?? ""),
+                }),
+                pricing_version: PRICING_VERSION,
+              },
+            },
+          },
+        })),
+        { ordered: false }
+      );
+    }
+    for (;;) {
+      const unranked = await col
+        .find({ media_rank: { $exists: false } }, { projection: { image_link: 1, video_link: 1, cert_link: 1, image_ok: 1, video_ok: 1 } })
+        .limit(READY_BATCH)
+        .toArray();
+      if (!unranked.length) break;
+      await col.bulkWrite(
+        unranked.map((d) => ({ updateOne: { filter: { _id: d._id }, update: { $set: { media_rank: mediaRank(d) } } } })),
+        { ordered: false }
+      );
+    }
+  })().catch((e) => {
+    readyPromise = null; // retry on the next request
+    throw e;
+  });
+  return readyPromise;
+}
+
+const READY_WAIT_MS = 1500;
+
+/**
+ * Waits for ensureStockReady, but at most READY_WAIT_MS: after a pricing
+ * change, re-pricing all stock takes minutes, and visitors shouldn't wait
+ * for it — until it finishes, a few stones may sort slightly off. It keeps
+ * going in the background and resumes on the next request if cut short.
+ */
+async function stockReady(db: Db): Promise<void> {
+  await Promise.race([
+    ensureStockReady(db).catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, READY_WAIT_MS)),
+  ]);
+}
+
+/**
+ * Bumped whenever stock changes (import, purge, assign, supplier removal),
+ * so per-process caches keyed on it (facets) drop stale entries.
+ */
+export async function bumpStockVersion(db: Db) {
+  await db.collection<{ _id: string; version: number }>("meta").updateOne({ _id: "stock" }, { $inc: { version: 1 } }, { upsert: true });
+}
+async function getStockVersion(db: Db): Promise<number> {
+  const doc = await db.collection<{ _id: string; version: number }>("meta").findOne({ _id: "stock" });
+  return doc?.version ?? 0;
+}
+
+// ---------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------
+
+// Carat and price, each ascending or descending — the two sort dimensions
+// the builder/public results grid exposes. Stones with a working photo or
+// video always come first, then certificate-only, then the rest
+// (media_rank), whichever sort is chosen; `_id` is the final tiebreaker
+// for stable pagination.
 export type DiamondSortField = "amount" | "carat";
 export type DiamondSort = { field: DiamondSortField; dir: "asc" | "desc" };
 export const DEFAULT_SORT: DiamondSort = { field: "amount", dir: "asc" };
 
 const SORT_FIELDS: DiamondSortField[] = ["amount", "carat"];
+// "amount" means the price shown, i.e. the stored catalog (sell) price —
+// kept current by ensureStockReady — not the landed cost.
+const SORT_COLUMN: Record<DiamondSortField, string> = { amount: "catalog_amount", carat: "carat" };
 
 /** Parses a client-supplied `{ field, dir }` into a validated DiamondSort, falling back to the default for anything unrecognized. */
 export function parseSort(input: unknown): DiamondSort {
@@ -151,22 +283,48 @@ export function parseSort(input: unknown): DiamondSort {
   return { field, dir };
 }
 
+/**
+ * How long a page request may spend checking its own unchecked stones'
+ * media: longer for page 1 (what a visitor sees first), shorter for later
+ * pages, which the viewer prefetches while the visitor is still scrolling.
+ */
+const PAGE_CHECK_BUDGET_MS = { first: 5000, later: 2500 };
+
 async function runQuery(
   query: Filter<any>,
   { page = 1, pageSize = 40, sort = DEFAULT_SORT }: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
   const db = await getDb();
+  await stockReady(db);
   const col = db.collection("diamond_stock");
-  const [docs, total] = await Promise.all([
+  const fetchPage = () =>
     col
       .find(query, { projection: PUBLIC_PROJECTION })
-      .sort({ [sort.field]: sort.dir === "asc" ? 1 : -1, _id: 1 })
+      .sort({ media_rank: 1, [SORT_COLUMN[sort.field]]: sort.dir === "asc" ? 1 : -1, _id: 1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
-      .toArray(),
-    col.countDocuments(query),
-  ]);
-  return { rows: docs.map((d) => serialize(d) as unknown as Record<string, unknown>), total };
+      .toArray();
+  const [firstPage, total] = await Promise.all([fetchPage(), col.countDocuments(query)]);
+  let docs = firstPage;
+
+  // Stones the full media check (lib/media-check.ts) hasn't reached yet are
+  // assumed to have media, so they could sit on this page without any.
+  // Check them now; any found empty sort lower, so fetch the page again and
+  // repeat for whichever stones moved up — within a time budget. Results
+  // are stored, so only the first visitor to a page waits for this. A stone
+  // whose host didn't answer in time (media_attempts set) is left to the
+  // full pass, which allows slow hosts longer — so no visitor waits on it
+  // twice.
+  const deadline = Date.now() + (page === 1 ? PAGE_CHECK_BUDGET_MS.first : PAGE_CHECK_BUDGET_MS.later);
+  const tried = new Set<string>();
+  for (;;) {
+    const unchecked = docs.filter((d) => !d.media_checked_at && !d.media_attempts && !tried.has(String(d._id)));
+    if (!unchecked.length || Date.now() > deadline - 1000) break;
+    unchecked.forEach((d) => tried.add(String(d._id)));
+    if (!(await checkUncheckedOnPage(db, unchecked.map((d) => d._id), deadline))) break;
+    docs = await fetchPage();
+  }
+  return { rows: docs.map(toPublicRow), total };
 }
 
 export async function queryDiamondStock(
@@ -190,6 +348,7 @@ export async function queryDiamondStockScoped(
 
 export async function countDiamondStock(filters: DiamondFilters): Promise<number> {
   const db = await getDb();
+  await stockReady(db);
   return db.collection("diamond_stock").countDocuments(buildQuery(filters));
 }
 
@@ -207,44 +366,76 @@ export type StockFacets = {
   growthTypes: { value: string; count: number }[];
 };
 
-function tally(rows: { value: string | null }[]): { value: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    if (!r.value) continue;
-    counts.set(r.value, (counts.get(r.value) ?? 0) + 1);
-  }
-  return Array.from(counts.entries())
-    .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count);
-}
+type Tally = { value: string; count: number }[];
+const groupBy = (field: string) => [
+  { $match: { [field]: { $nin: [null, ""] } } },
+  { $group: { _id: `$${field}`, count: { $sum: 1 } } },
+  { $sort: { count: -1 } },
+  { $project: { _id: 0, value: "$_id", count: 1 } },
+];
 
+const FACET_CACHE_MAX = 200;
+const facetCache = new Map<string, Promise<StockFacets>>();
+
+/**
+ * Counted inside MongoDB ($facet) rather than by pulling every matching
+ * stone into the server, and cached per process until stock changes
+ * (bumpStockVersion) — facets depend only on the stock and the filter.
+ */
 async function facetsForQuery(query: Filter<any>): Promise<StockFacets> {
   const db = await getDb();
-  const rows = (await db
-    .collection("diamond_stock")
-    .find(
-      query,
-      { projection: { shape: 1, color: 1, clarity: 1, cut: 1, polish: 1, symm: 1, fls: 1, cert: 1, location: 1, growth_type: 1 } }
-    )
-    .toArray()) as unknown as {
-    shape: string; color: string;
-    clarity: string; cut: string | null; polish: string | null; symm: string | null;
-    fls: string | null; cert: string; location: string | null; growth_type: string | null;
-  }[];
+  const key = `${await getStockVersion(db)}:${JSON.stringify(query, (_k, v) => (v instanceof RegExp ? String(v) : v))}`;
+  const hit = facetCache.get(key);
+  if (hit) return hit;
 
-  return {
-    shapes: tally(rows.map((r) => ({ value: r.shape }))),
-    whiteColors: tally(rows.filter((r) => isWhiteGrade(r.color ?? "")).map((r) => ({ value: r.color }))),
-    fancyHues: tally(rows.filter((r) => r.color && !isWhiteGrade(r.color)).map((r) => ({ value: dominantHue(r.color) }))),
-    clarities: tally(rows.map((r) => ({ value: r.clarity }))),
-    cuts: tally(rows.map((r) => ({ value: r.cut }))),
-    polishes: tally(rows.map((r) => ({ value: r.polish }))),
-    symms: tally(rows.map((r) => ({ value: r.symm }))),
-    fluorescences: tally(rows.map((r) => ({ value: r.fls }))),
-    labs: tally(rows.map((r) => ({ value: r.cert }))),
-    locations: tally(rows.map((r) => ({ value: r.location }))),
-    growthTypes: tally(rows.map((r) => ({ value: r.growth_type }))),
-  };
+  const run = (async (): Promise<StockFacets> => {
+    const [f] = await db
+      .collection("diamond_stock")
+      .aggregate<Record<string, Tally>>([
+        { $match: query },
+        {
+          $facet: {
+            shapes: groupBy("shape"),
+            colors: groupBy("color"),
+            clarities: groupBy("clarity"),
+            cuts: groupBy("cut"),
+            polishes: groupBy("polish"),
+            symms: groupBy("symm"),
+            fluorescences: groupBy("fls"),
+            labs: groupBy("cert"),
+            locations: groupBy("location"),
+            growthTypes: groupBy("growth_type"),
+          },
+        },
+      ])
+      .toArray();
+
+    // White grades are listed as-is; fancy colors roll up by dominant hue.
+    const fancy = new Map<string, number>();
+    for (const c of f.colors) {
+      if (isWhiteGrade(c.value)) continue;
+      const hue = dominantHue(c.value);
+      if (hue) fancy.set(hue, (fancy.get(hue) ?? 0) + c.count);
+    }
+    return {
+      shapes: f.shapes,
+      whiteColors: f.colors.filter((c) => isWhiteGrade(c.value)),
+      fancyHues: Array.from(fancy, ([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
+      clarities: f.clarities,
+      cuts: f.cuts,
+      polishes: f.polishes,
+      symms: f.symms,
+      fluorescences: f.fluorescences,
+      labs: f.labs,
+      locations: f.locations,
+      growthTypes: f.growthTypes,
+    };
+  })();
+
+  facetCache.set(key, run);
+  run.catch(() => facetCache.delete(key));
+  if (facetCache.size > FACET_CACHE_MAX) facetCache.delete(facetCache.keys().next().value!);
+  return run;
 }
 
 /** Distinct filter option values actually present in current stock, with counts — powers the builder's filter chips instead of a hardcoded (and possibly stale) list. */

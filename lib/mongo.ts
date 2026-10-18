@@ -37,6 +37,17 @@ async function ensureIndexes(db: Db) {
     // Per-supplier replace/purge, and same-certificate dedupe across suppliers.
     db.collection("diamond_stock").createIndex({ supplier_id: 1 }),
     db.collection("diamond_stock").createIndex({ cert_key: 1 }),
+    // Catalog order: working media first (media_rank), then the chosen sort
+    // — catalog_amount (sell price) or carat, either direction — then _id.
+    // Each index matches one sort exactly, so MongoDB reads a page straight
+    // off the index instead of sorting every match in memory (see
+    // lib/diamond-stock-query.ts runQuery).
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, catalog_amount: 1, _id: 1 }),
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, catalog_amount: -1, _id: 1 }),
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, carat: 1, _id: 1 }),
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, carat: -1, _id: 1 }),
+    // Media verification queue (lib/media-check.ts verifyMediaBatch).
+    db.collection("diamond_stock").createIndex({ media_checked_at: 1, media_attempts: 1, stone_stage: 1 }),
     db.collection("diamond_suppliers").createIndex({ name: 1 }, { unique: true, collation: { locale: "en", strength: 2 } }),
   ]);
 }

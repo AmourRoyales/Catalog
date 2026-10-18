@@ -9,19 +9,12 @@
 import { queryDiamondStock, queryDiamondStockScoped, type DiamondFilters, type DiamondSort } from "@/lib/diamond-stock-query";
 import type { PricedRow } from "@/lib/diamond-pricing";
 
-// A carat sort is a real indexed DB field — MongoDB sorts and paginates it
-// directly, cheaply, at any stock size. A price sort can't work that way:
-// the displayed price is cost + a markup that varies per stone by color,
-// clarity and carat (see PRICING_PROFILE), so the DB's raw `amount` column
-// is only approximately in the same order as the computed sell price —
-// close, but with small adjacent swaps that would look like a bug in a
-// "Price: Low to High" sort. So for a price sort, every matching stone is
-// fetched, priced, and sorted here in memory, then the page is sliced —
-// affordable at this stock's actual size (five figures, comfortably under
-// the cap below), and always exactly right.
-const PRICE_SORT_FETCH_CAP = 50000;
+// Both sorts — carat and price — run in MongoDB: the price sort uses each
+// doc's stored catalog_amount, which lib/diamond-stock-query.ts
+// ensureStockReady keeps in step with the current PRICING_PROFILE, so it is
+// in exactly the order of the price `price` computes for display.
 
-/** Runs a diamond_stock query and prices every row with `price`, honoring `sort` exactly regardless of field. */
+/** Runs a diamond_stock query and prices every row on the returned page with `price`. */
 export async function queryAndPrice<T extends PricedRow>(
   price: (row: Record<string, unknown> & PricedRow) => T,
   opts: {
@@ -33,19 +26,9 @@ export async function queryAndPrice<T extends PricedRow>(
     pageSize: number;
   }
 ): Promise<{ rows: T[]; total: number }> {
-  const run = (queryOpts: { page: number; pageSize: number; sort?: DiamondSort }) =>
-    opts.scopedTo
-      ? queryDiamondStockScoped(opts.scopedTo, opts.filters, queryOpts)
-      : queryDiamondStock(opts.filters, queryOpts);
-
-  if (opts.sort.field !== "amount") {
-    const { rows, total } = await run({ page: opts.page, pageSize: opts.pageSize, sort: opts.sort });
-    return { rows: rows.map((r) => price(r as Record<string, unknown> & PricedRow)), total };
-  }
-
-  const { rows: allRaw, total } = await run({ page: 1, pageSize: PRICE_SORT_FETCH_CAP });
-  const priced = allRaw.map((r) => price(r as Record<string, unknown> & PricedRow));
-  priced.sort((a, b) => (opts.sort.dir === "asc" ? a.amount - b.amount : b.amount - a.amount));
-  const start = (opts.page - 1) * opts.pageSize;
-  return { rows: priced.slice(start, start + opts.pageSize), total };
+  const queryOpts = { page: opts.page, pageSize: opts.pageSize, sort: opts.sort };
+  const { rows, total } = opts.scopedTo
+    ? await queryDiamondStockScoped(opts.scopedTo, opts.filters, queryOpts)
+    : await queryDiamondStock(opts.filters, queryOpts);
+  return { rows: rows.map((r) => price(r as Record<string, unknown> & PricedRow)), total };
 }

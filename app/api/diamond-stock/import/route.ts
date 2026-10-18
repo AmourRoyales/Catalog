@@ -6,6 +6,8 @@ import { getDb } from "@/lib/mongo";
 import { parseStockWorkbook } from "@/lib/diamond-stock-import";
 import { dedupeAgainstStock, uniqueByCert, type SupplierDoc } from "@/lib/diamond-suppliers";
 import { priceStockRowForStorage } from "@/lib/diamond-pricing";
+import { PRICING_VERSION, bumpStockVersion } from "@/lib/diamond-stock-query";
+import { carryOverMediaChecks, mediaRank } from "@/lib/media-check";
 
 const INSERT_BATCH_SIZE = 500;
 
@@ -38,6 +40,9 @@ export async function POST(request: Request) {
   const inFile = uniqueByCert(parsed.rows);
   const { rows: unique, skipped: duplicatesSkipped, displaceIds } = await dedupeAgainstStock(db, supplier._id, inFile.rows);
 
+  // Same photo/video links as last time: reuse those check results.
+  await carryOverMediaChecks(db, unique);
+
   const batchId = randomUUID();
   const importedAt = new Date();
   const rows = unique.map((r) => ({
@@ -49,6 +54,9 @@ export async function POST(request: Request) {
       color: String(r.color ?? ""),
       clarity: String(r.clarity ?? ""),
     }),
+    pricing_version: PRICING_VERSION,
+    // Provisional until the media check (lib/media-check.ts) has run.
+    media_rank: mediaRank(r),
     supplier_id: supplier._id,
     supplier_name: supplier.name,
     batch_id: batchId,
@@ -83,6 +91,8 @@ export async function POST(request: Request) {
   const { deletedCount: displaced } = displaceIds.length
     ? await col.deleteMany({ _id: { $in: displaceIds } })
     : { deletedCount: 0 };
+
+  await bumpStockVersion(db);
 
   return NextResponse.json({
     imported: rows.length,

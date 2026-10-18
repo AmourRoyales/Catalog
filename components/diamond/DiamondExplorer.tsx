@@ -10,6 +10,8 @@ import StoneDetail, { type StockRow } from "@/components/diamond/StoneDetail";
 import type { DiamondSort } from "@/lib/diamond-stock-query";
 
 type SortKey = "price-asc" | "price-desc" | "carat-asc" | "carat-desc";
+/** Rows per page — must match PAGE_SIZE in the search API routes. */
+const PAGE_SIZE = 40;
 const DEFAULT_SORT_KEY: SortKey = "price-asc";
 const SORT_OPTIONS: { key: SortKey; label: string; sort: DiamondSort }[] = [
   { key: "price-asc", label: "Price: Low to High", sort: { field: "amount", dir: "asc" } },
@@ -71,6 +73,7 @@ export default function DiamondExplorer({
   heightClass = "h-[calc(100vh-3.5rem)] md:h-screen",
   initialRows,
   initialTotal,
+  initialFacets,
 }: {
   topBar?: (state: ExplorerState) => React.ReactNode;
   facetsUrl?: string;
@@ -83,6 +86,8 @@ export default function DiamondExplorer({
   /** Seeds the first render (e.g. from a server component) so there's no blank flash before the client fetch lands. */
   initialRows?: StockRow[];
   initialTotal?: number;
+  /** Filter options from the server render, so the filter panel shows immediately instead of "loading". */
+  initialFacets?: Facets;
 }) {
   const [draft, setDraft] = useState<DiamondFilters>(DEFAULT_FILTERS);
   const [applied, setApplied] = useState<DiamondFilters>(DEFAULT_FILTERS);
@@ -92,7 +97,7 @@ export default function DiamondExplorer({
   const [sortKey, setSortKey] = useState<SortKey>(showPrice ? DEFAULT_SORT_KEY : "carat-asc");
   const sortOptions = showPrice ? SORT_OPTIONS : SORT_OPTIONS.filter((o) => o.sort.field === "carat");
 
-  const [facets, setFacets] = useState<Facets | null>(null);
+  const [facets, setFacets] = useState<Facets | null>(initialFacets ?? null);
   const [rows, setRows] = useState<StockRow[]>(initialRows ?? []);
   const [total, setTotal] = useState(initialTotal ?? 0);
   const [page, setPage] = useState(1);
@@ -108,27 +113,55 @@ export default function DiamondExplorer({
   const skipFirstFetch = useRef(!!initialRows);
 
   useEffect(() => {
+    if (initialFacets) return;
     fetch(facetsUrl).then((r) => r.json()).then(setFacets);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facetsUrl]);
 
+  // Pages are requested through this cache, keyed by filters + sort + page.
+  // As soon as a page is shown the next one is fetched in the background,
+  // so scrolling down appends it straight from here instead of waiting on
+  // the network.
+  const pageCache = useRef(new Map<string, Promise<{ rows: StockRow[]; total: number }>>());
+  const requestPage = useCallback(
+    (pageNum: number) => {
+      const sort = SORT_OPTIONS.find((o) => o.key === sortKey)!.sort;
+      const key = JSON.stringify([searchUrl, applied, sort, pageNum]);
+      const cached = pageCache.current.get(key);
+      if (cached) return cached;
+      const request = fetch(searchUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters: applied, page: pageNum, sort }),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Search failed");
+        return res.json() as Promise<{ rows: StockRow[]; total: number }>;
+      });
+      pageCache.current.set(key, request);
+      request.catch(() => pageCache.current.delete(key));
+      return request;
+    },
+    [applied, searchUrl, sortKey]
+  );
+  const prefetch = useCallback((pageNum: number) => requestPage(pageNum).catch(() => {}), [requestPage]);
+
   const fetchPage = useCallback(
     async (pageNum: number, replace: boolean) => {
       const seq = ++requestSeq.current;
-      if (replace) setLoading(true);
-      else setLoadingMore(true);
+      if (replace) {
+        // New filters or sort: earlier pages are stale.
+        pageCache.current.clear();
+        setLoading(true);
+      } else setLoadingMore(true);
       try {
-        const sort = SORT_OPTIONS.find((o) => o.key === sortKey)!.sort;
-        const res = await fetch(searchUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filters: applied, page: pageNum, sort }),
-        });
-        const data = await res.json();
+        const data = await requestPage(pageNum);
         if (seq !== requestSeq.current) return;
         setRows((prev) => (replace ? data.rows : [...prev, ...data.rows]));
         setTotal(data.total ?? 0);
         setPage(pageNum);
+        if (pageNum * PAGE_SIZE < (data.total ?? 0)) prefetch(pageNum + 1);
+      } catch {
+        // Leave what's shown; the next scroll retries.
       } finally {
         if (seq === requestSeq.current) {
           setLoading(false);
@@ -136,7 +169,7 @@ export default function DiamondExplorer({
         }
       }
     },
-    [applied, searchUrl, sortKey]
+    [requestPage, prefetch]
   );
 
   // Sort applies immediately (unlike filters, which stage until "Apply
@@ -145,9 +178,12 @@ export default function DiamondExplorer({
   useEffect(() => {
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
+      // The server already rendered page 1 — get page 2 ready.
+      if ((initialRows?.length ?? 0) < (initialTotal ?? 0)) prefetch(2);
       return;
     }
     fetchPage(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchPage]);
 
   const hasMore = rows.length < total;
@@ -158,7 +194,9 @@ export default function DiamondExplorer({
       (entries) => {
         if (entries[0]?.isIntersecting && !loading && !loadingMore) fetchPage(page + 1, false);
       },
-      { root: scrollRef.current, rootMargin: "500px" }
+      // Start well before the end of the list; with the next page already
+      // prefetched, it's appended before the visitor reaches the bottom.
+      { root: scrollRef.current, rootMargin: "1500px" }
     );
     obs.observe(el);
     return () => obs.disconnect();

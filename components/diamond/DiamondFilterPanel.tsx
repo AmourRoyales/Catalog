@@ -19,7 +19,8 @@ const GRADES: [string, string][] = [
 const FLUORESCENCE = ["NON", "SL", "VSL", "STG"];
 const LABS = ["IGI", "GIA", "GCAL", "SGL"];
 
-export const DEFAULT_FILTERS: DiamondFilters = { priceMode: "total", colorMode: "white" };
+// No colorMode = all colors, white and fancy ("All" tab).
+export const DEFAULT_FILTERS: DiamondFilters = { priceMode: "total" };
 
 /** Number of filters actually narrowing the search (ignores the two mode toggles). */
 export function activeFilterCount(f: DiamondFilters): number {
@@ -131,16 +132,19 @@ export default function DiamondFilterPanel({
 
       <Card>
         <Tabs
-          tabs={[{ value: "white", label: "White" }, { value: "fancy", label: "Fancy" }]}
-          value={(filters.colorMode ?? "white") as "white" | "fancy"}
-          onChange={(mode) => setFilters((f) => ({ ...f, colorMode: mode, colors: undefined, fancyHues: undefined }))}
+          tabs={[{ value: "all", label: "All" }, { value: "white", label: "White" }, { value: "fancy", label: "Fancy" }]}
+          value={filters.colorMode ?? "all"}
+          onChange={(mode) =>
+            setFilters((f) => ({ ...f, colorMode: mode === "all" ? undefined : mode, colors: undefined, fancyHues: undefined }))
+          }
         />
         <div className="mb-3">
           <Check checked={!!filters.noBgm} onChange={(v) => setFilter("noBgm", v || undefined)} label="No BGM" />
         </div>
         <h3 className="text-[13px] font-bold text-gray-900 mb-2">Color</h3>
-        {(filters.colorMode ?? "white") === "white" ? (
+        {filters.colorMode !== "fancy" && (
           <>
+            {!filters.colorMode && <p className="text-[11px] text-gray-500 mb-1.5">White</p>}
             <div className="flex flex-wrap gap-1.5">
               {visibleWhite.map((g) => (
                 <Pill key={g} active={has("colors", g)} onClick={() => toggleMany("colors", [g])} title={`${countOf(facets.whiteColors, g)} in stock`}>
@@ -150,14 +154,18 @@ export default function DiamondFilterPanel({
             </div>
             <Expander open={colorsOpen} onToggle={() => setColorsOpen((o) => !o)} />
           </>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {facets.fancyHues.map((h) => (
-              <Pill key={h.value} wide active={has("fancyHues", h.value)} onClick={() => toggleMany("fancyHues", [h.value])} title={`${h.count} in stock`}>
-                {h.value}
-              </Pill>
-            ))}
-          </div>
+        )}
+        {filters.colorMode !== "white" && facets.fancyHues.length > 0 && (
+          <>
+            {!filters.colorMode && <p className="text-[11px] text-gray-500 mt-3 mb-1.5">Fancy</p>}
+            <div className="flex flex-wrap gap-1.5">
+              {facets.fancyHues.map((h) => (
+                <Pill key={h.value} wide active={has("fancyHues", h.value)} onClick={() => toggleMany("fancyHues", [h.value])} title={`${h.count} in stock`}>
+                  {h.value}
+                </Pill>
+              ))}
+            </div>
+          </>
         )}
       </Card>
 
