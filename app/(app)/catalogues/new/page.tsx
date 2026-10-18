@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ProductThumb, { type ThumbMedia } from "@/components/ProductThumb";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, SUBCATEGORIES, STONE_SHAPES } from "@/lib/jewelry-options";
 
@@ -12,6 +13,8 @@ type Product = {
   subcategory: string | null;
   stone_shape: string | null;
   cover_url: string | null;
+  /** All photos/videos in display order, for the thumbnail preview. */
+  media: ThumbMedia[];
 };
 
 // Union of all stone shapes across every category (deduplicated)
@@ -55,6 +58,7 @@ export default function NewCataloguePage() {
               subcategory: p.subcategory,
               stone_shape: p.stone_shape,
               cover_url: sorted[0]?.file_url ?? null,
+              media: sorted.map((m: any) => ({ file_url: m.file_url, media_type: m.media_type })),
             };
           })
         );
@@ -303,15 +307,7 @@ export default function NewCataloguePage() {
                   key={p.id}
                   className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50 transition"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-page overflow-hidden shrink-0">
-                    {p.cover_url && (
-                      <img
-                        src={p.cover_url}
-                        className="w-full h-full object-cover"
-                        alt=""
-                      />
-                    )}
-                  </div>
+                  <ProductThumb media={p.media} name={p.name} code={p.product_code} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-ink truncate">
                       {p.name}
@@ -371,15 +367,7 @@ export default function NewCataloguePage() {
                   <span className="text-[11px] text-gray-300 w-5 text-right shrink-0">
                     {i + 1}
                   </span>
-                  <div className="w-9 h-9 rounded-lg bg-page overflow-hidden shrink-0">
-                    {p.cover_url && (
-                      <img
-                        src={p.cover_url}
-                        className="w-full h-full object-cover"
-                        alt=""
-                      />
-                    )}
-                  </div>
+                  <ProductThumb media={p.media} name={p.name} code={p.product_code} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-ink truncate">
                       {p.name}
