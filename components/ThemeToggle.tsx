@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_THEME_PREFS, THEME_CHANGE_EVENT, THEME_STORAGE_KEY, applyTheme, isDarkAt, readThemePrefs, writeThemePrefs,
   type ThemeMode, type ThemePrefs,
@@ -55,48 +55,25 @@ const MODES: { value: ThemeMode; label: string; icon: string }[] = [
   { value: "auto", label: "Auto", icon: "◐" },
 ];
 
-/** Mode picker + auto-mode hours. Styled for the navy sidebar / header chrome. */
+/** Light / Dark / Auto buttons. Auto uses the default 19:00-07:00 dark window. Styled for the navy sidebar / header chrome. */
 function ThemeControls({ prefs, save }: { prefs: ThemePrefs; save: (p: ThemePrefs) => void }) {
-  const id = useId();
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-1 rounded-lg bg-white/5 p-1" role="radiogroup" aria-label="Theme">
-        {MODES.map((m) => (
-          <button
-            key={m.value}
-            type="button"
-            role="radio"
-            aria-checked={prefs.mode === m.value}
-            onClick={() => save({ ...prefs, mode: m.value })}
-            className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] transition ${
-              prefs.mode === m.value ? "bg-white/15 text-white" : "text-white/50 hover:text-white"
-            }`}
-          >
-            <span aria-hidden>{m.icon}</span>
-            {m.label}
-          </button>
-        ))}
-      </div>
-      {prefs.mode === "auto" && (
-        <div className="mt-2 grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1 text-[11px] text-white/50">
-          <label htmlFor={`${id}-dark`}>Dark from</label>
-          <input
-            id={`${id}-dark`}
-            type="time"
-            value={prefs.darkFrom}
-            onChange={(e) => e.target.value && save({ ...prefs, darkFrom: e.target.value })}
-            className="min-w-0 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-white/80 [color-scheme:dark]"
-          />
-          <label htmlFor={`${id}-light`}>Light from</label>
-          <input
-            id={`${id}-light`}
-            type="time"
-            value={prefs.lightFrom}
-            onChange={(e) => e.target.value && save({ ...prefs, lightFrom: e.target.value })}
-            className="min-w-0 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-white/80 [color-scheme:dark]"
-          />
-        </div>
-      )}
+    <div className="grid grid-cols-3 gap-1 rounded-lg bg-white/5 p-1" role="radiogroup" aria-label="Theme">
+      {MODES.map((m) => (
+        <button
+          key={m.value}
+          type="button"
+          role="radio"
+          aria-checked={prefs.mode === m.value}
+          onClick={() => save({ ...DEFAULT_THEME_PREFS, mode: m.value })}
+          className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] transition ${
+            prefs.mode === m.value ? "bg-white/15 text-white" : "text-white/50 hover:text-white"
+          }`}
+        >
+          <span aria-hidden>{m.icon}</span>
+          {m.label}
+        </button>
+      ))}
     </div>
   );
 }
