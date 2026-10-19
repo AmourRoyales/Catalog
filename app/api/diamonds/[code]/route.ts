@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongo";
 import { parseSort, type DiamondFilters } from "@/lib/diamond-stock-query";
-import { withPublicPricing } from "@/lib/diamond-pricing";
+import { catalogPricing } from "@/lib/diamond-pricing";
 import { queryAndPrice } from "@/lib/diamond-query-and-price";
 
 const PAGE_SIZE = 40;
@@ -26,11 +26,12 @@ export async function GET(request: Request, { params }: { params: { code: string
   const page = Math.max(1, Number(params2.get("page")) || 1);
   const sort = parseSort({ field: params2.get("sortField"), dir: params2.get("sortDir") });
   // Public: sell price only — see app/diamonds/[code]/page.tsx (first page) for why.
-  const { rows, total } = await queryAndPrice(withPublicPricing, {
+  const { rows, total } = await queryAndPrice(catalogPricing(catalog.flat_markup_percent), {
     filters: catalog.filters as DiamondFilters,
     sort,
     page,
     pageSize: PAGE_SIZE,
+    flatMarkupPercent: catalog.flat_markup_percent,
   });
   return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE });
 }
@@ -55,12 +56,13 @@ export async function POST(request: Request, { params }: { params: { code: strin
   const page = Math.max(1, Number(body.page) || 1);
   const sort = parseSort(body.sort);
 
-  const { rows, total } = await queryAndPrice(withPublicPricing, {
+  const { rows, total } = await queryAndPrice(catalogPricing(catalog.flat_markup_percent), {
     filters: visitorFilters,
     scopedTo: catalog.filters as DiamondFilters,
     sort,
     page,
     pageSize: PAGE_SIZE,
+    flatMarkupPercent: catalog.flat_markup_percent,
   });
   return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE });
 }

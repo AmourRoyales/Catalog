@@ -12,9 +12,13 @@ import { checkUncheckedOnPage, mediaRank } from "@/lib/media-check";
 export type DiamondFilters = {
   /** IGI/GIA/etc. certificate (report) number — free-text, partial match. Admin-only: never exposed on the public catalog UI or accepted from public filter input. */
   reportNo?: string;
+  /** Exact stones by stone_id — a hand-picked catalog (e.g. matched sets). Not editable in the builder — set on a saved catalog. */
+  stoneIds?: string[];
   shapes?: string[];
   caratMin?: number;
   caratMax?: number;
+  /** Per-shape carat ranges that replace caratMin/caratMax for those shapes (e.g. Round from 0.5ct, every other shape from 1ct). Not editable in the builder — set on a saved catalog. */
+  shapeCaratRanges?: { shape: string; caratMin?: number; caratMax?: number }[];
   colorMode?: "white" | "fancy"; // omitted = both ("All"); colors / fancyHues picked there match either
   colors?: string[]; // White tab: literal grade letters ("D", "E", ... or a range like "O-P")
   fancyHues?: string[]; // Fancy tab: dominant hue family ("Yellow", "Pink", ...), matched via the fancy_hue derived column
@@ -85,7 +89,14 @@ function dominantHue(c: string): string | null {
 
 const escapeRegex = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export function buildQuery(filters: DiamondFilters): Filter<any> {
+/**
+ * A catalog priced at a flat markup over cost (diamond_catalogs.flat_markup_percent)
+ * shows cost × (1 + percent/100), so its price sort and price filter run on
+ * the landed cost (rate/amount) instead of the stored catalog_* sell price.
+ */
+export type PriceBasis = { flatMarkupPercent?: number | null };
+
+export function buildQuery(filters: DiamondFilters, basis: PriceBasis = {}): Filter<any> {
   // Always-on: only stones actually on hand (excludes transferred-out,
   // memo and on-hold rows, which aren't available stock).
   const q: Record<string, any> = { stone_stage: "OH" };
@@ -93,12 +104,22 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
 
   if (filters.reportNo?.trim()) q.report_no = { $regex: escapeRegex(filters.reportNo.trim()), $options: "i" };
 
+  if (filters.stoneIds) q.stone_id = { $in: filters.stoneIds };
   if (filters.shapes?.length) q.shape = { $in: filters.shapes };
-  if (filters.caratMin != null || filters.caratMax != null) {
-    q.carat = {
-      ...(filters.caratMin != null ? { $gte: filters.caratMin } : {}),
-      ...(filters.caratMax != null ? { $lte: filters.caratMax } : {}),
-    };
+  const caratRange = (min?: number, max?: number) =>
+    min != null || max != null
+      ? { carat: { ...(min != null ? { $gte: min } : {}), ...(max != null ? { $lte: max } : {}) } }
+      : {};
+  if (filters.shapeCaratRanges?.length) {
+    const own = filters.shapeCaratRanges.map((r) => r.shape);
+    and.push({
+      $or: [
+        ...filters.shapeCaratRanges.map((r) => ({ shape: r.shape, ...caratRange(r.caratMin, r.caratMax) })),
+        { shape: { $nin: own }, ...caratRange(filters.caratMin, filters.caratMax) },
+      ],
+    });
+  } else {
+    Object.assign(q, caratRange(filters.caratMin, filters.caratMax));
   }
 
   // Filters the Color column itself. White = plain D-Z grades / ranges like
@@ -142,8 +163,16 @@ export function buildQuery(filters: DiamondFilters): Filter<any> {
     q[field] = { ...(min != null ? { $gte: min } : {}), ...(max != null ? { $lte: max } : {}) };
   };
   // The price customers see is the catalog (sell) price, so that's what the
-  // price filter matches — not the landed cost in rate/amount.
-  range(filters.priceMode === "per_ct" ? "catalog_rate" : "catalog_amount", filters.priceMin, filters.priceMax);
+  // price filter matches — not the landed cost in rate/amount. A flat-markup
+  // catalog's sell price is cost × factor, so its bounds are scaled back to cost.
+  const perCt = filters.priceMode === "per_ct";
+  if (basis.flatMarkupPercent != null) {
+    const factor = 1 + basis.flatMarkupPercent / 100;
+    const toCost = (v?: number) => (v != null ? v / factor : undefined);
+    range(perCt ? "rate" : "amount", toCost(filters.priceMin), toCost(filters.priceMax));
+  } else {
+    range(perCt ? "catalog_rate" : "catalog_amount", filters.priceMin, filters.priceMax);
+  }
 
   if (filters.locations?.length) {
     q.location = filters.excludeLocations ? { $nin: filters.locations } : { $in: filters.locations };
@@ -290,17 +319,21 @@ export function parseSort(input: unknown): DiamondSort {
  */
 const PAGE_CHECK_BUDGET_MS = { first: 5000, later: 2500 };
 
+type QueryOpts = { page?: number; pageSize?: number; sort?: DiamondSort } & PriceBasis;
+
 async function runQuery(
   query: Filter<any>,
-  { page = 1, pageSize = 40, sort = DEFAULT_SORT }: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
+  { page = 1, pageSize = 40, sort = DEFAULT_SORT, flatMarkupPercent }: QueryOpts = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
   const db = await getDb();
   await stockReady(db);
   const col = db.collection("diamond_stock");
+  // Flat-markup price is cost × a constant, so cost order is price order.
+  const sortColumn = sort.field === "amount" && flatMarkupPercent != null ? "amount" : SORT_COLUMN[sort.field];
   const fetchPage = () =>
     col
       .find(query, { projection: PUBLIC_PROJECTION })
-      .sort({ media_rank: 1, [SORT_COLUMN[sort.field]]: sort.dir === "asc" ? 1 : -1, _id: 1 })
+      .sort({ media_rank: 1, [sortColumn]: sort.dir === "asc" ? 1 : -1, _id: 1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .toArray();
@@ -329,9 +362,9 @@ async function runQuery(
 
 export async function queryDiamondStock(
   filters: DiamondFilters,
-  opts: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
+  opts: QueryOpts = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
-  return runQuery(buildQuery(filters), opts);
+  return runQuery(buildQuery(filters, opts), opts);
 }
 
 // A public catalog link's own search: `base` is the catalog's saved filter
@@ -341,9 +374,9 @@ export async function queryDiamondStock(
 export async function queryDiamondStockScoped(
   base: DiamondFilters,
   extra: DiamondFilters,
-  opts: { page?: number; pageSize?: number; sort?: DiamondSort } = {}
+  opts: QueryOpts = {}
 ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
-  return runQuery({ $and: [buildQuery(base), buildQuery(extra)] }, opts);
+  return runQuery({ $and: [buildQuery(base, opts), buildQuery(extra, opts)] }, opts);
 }
 
 export async function countDiamondStock(filters: DiamondFilters): Promise<number> {

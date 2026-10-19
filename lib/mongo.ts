@@ -44,6 +44,9 @@ async function ensureIndexes(db: Db) {
     // lib/diamond-stock-query.ts runQuery).
     db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, catalog_amount: 1, _id: 1 }),
     db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, catalog_amount: -1, _id: 1 }),
+    // Same, by landed cost — the price order of a flat-markup catalog.
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, amount: 1, _id: 1 }),
+    db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, amount: -1, _id: 1 }),
     db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, carat: 1, _id: 1 }),
     db.collection("diamond_stock").createIndex({ stone_stage: 1, media_rank: 1, carat: -1, _id: 1 }),
     // Media verification queue (lib/media-check.ts verifyMediaBatch).

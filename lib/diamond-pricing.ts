@@ -257,6 +257,25 @@ export function withPublicPricing<T extends PricedRow>(row: T): T {
   return { ...row, rate, amount: p.catalogPrice };
 }
 
+/**
+ * Public-facing, for a catalog with its own flat markup
+ * (diamond_catalogs.flat_markup_percent): price = cost × (1 + percent/100),
+ * rounded to the dollar — none of the tiers, adjustments, floor or minimum
+ * profit above. Like withPublicPricing, the cost never leaves this function.
+ */
+export function withFlatMarkup(percent: number) {
+  return <T extends PricedRow>(row: T): T => {
+    const amount = Math.round(Number(row.amount) * (1 + percent / 100));
+    const carat = Number(row.carat);
+    return { ...row, rate: carat > 0 ? amount / carat : amount, amount };
+  };
+}
+
+/** The public pricer for a saved diamond catalog: its flat markup (flat_markup_percent) if it has one, otherwise the standard engine. */
+export function catalogPricing(flatMarkupPercent: number | null | undefined) {
+  return flatMarkupPercent != null ? withFlatMarkup(flatMarkupPercent) : withPublicPricing;
+}
+
 // ---------------------------------------------------------------------
 // Insert-time pricing snapshot
 // ---------------------------------------------------------------------

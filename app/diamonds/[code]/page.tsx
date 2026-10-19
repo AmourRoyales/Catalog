@@ -1,7 +1,9 @@
 import { getDb } from "@/lib/mongo";
 import { getScopedStockFacets, queryDiamondStock, type DiamondFilters } from "@/lib/diamond-stock-query";
-import { withPublicPricing, type PricedRow } from "@/lib/diamond-pricing";
-import DiamondCatalogViewer, { type StockRow } from "./viewer";
+import { catalogPricing, type PricedRow } from "@/lib/diamond-pricing";
+import DiamondCatalogViewer, { type CatalogSet, type StockRow } from "./viewer";
+
+type SavedSet = { name: string; stone_ids: string[] };
 
 export default async function PublicDiamondCatalogPage({ params }: { params: { code: string } }) {
   const db = await getDb();
@@ -24,17 +26,31 @@ export default async function PublicDiamondCatalogPage({ params }: { params: { c
   // or carat when prices are hidden) and the filter options, together — so
   // the page opens with stones and a ready filter panel, no second round trip.
   const filters = catalog.filters as DiamondFilters;
-  const [{ rows, total }, facets] = await Promise.all([
+  const savedSets = (catalog.sets ?? []) as SavedSet[];
+  const setStoneIds = savedSets.flatMap((s) => s.stone_ids);
+  const [{ rows, total }, facets, setStones] = await Promise.all([
     queryDiamondStock(filters, {
       page: 1,
       pageSize: 40,
       sort: catalog.show_price ? { field: "amount", dir: "asc" } : { field: "carat", dir: "asc" },
+      flatMarkupPercent: catalog.flat_markup_percent,
     }),
     getScopedStockFacets(filters),
+    setStoneIds.length
+      ? queryDiamondStock({ stoneIds: setStoneIds }, { page: 1, pageSize: setStoneIds.length, flatMarkupPercent: catalog.flat_markup_percent })
+      : null,
   ]);
   // Public: rate/amount become the sell price (cost + margin). The original
   // stock cost is never attached, so it can't leak into this page's payload.
-  const priced = rows.map((r) => withPublicPricing(r as Record<string, unknown> & PricedRow));
+  const price = catalogPricing(catalog.flat_markup_percent);
+  const priced = rows.map((r) => price(r as Record<string, unknown> & PricedRow));
+
+  // Matched sets, in saved order; a stone no longer on hand stays listed as unavailable.
+  const byId = new Map((setStones?.rows ?? []).map((r) => [String(r.stone_id), price(r as Record<string, unknown> & PricedRow)]));
+  const sets: CatalogSet[] = savedSets.map((s) => ({
+    name: s.name,
+    stones: s.stone_ids.map((id) => ({ stone_id: id, row: (byId.get(id) ?? null) as unknown as StockRow | null })),
+  }));
 
   return (
     <DiamondCatalogViewer
@@ -46,6 +62,7 @@ export default async function PublicDiamondCatalogPage({ params }: { params: { c
       total={total}
       // Location is internal warehouse info — never sent to the public page.
       facets={{ ...facets, locations: [] }}
+      sets={sets}
     />
   );
 }

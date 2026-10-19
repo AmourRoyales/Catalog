@@ -4,13 +4,14 @@
 // authenticated "View Diamonds" page — same filter panel, same mobile
 // drawer, same card grid and stone modal — pointed at this catalog's own
 // (unauthenticated) search/facets routes instead of the admin ones.
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import DiamondExplorer from "@/components/diamond/DiamondExplorer";
+import SetsTable, { type CatalogSet } from "@/components/diamond/SetsTable";
 import { ThemeMenu } from "@/components/ThemeToggle";
 import type { StockRow } from "@/components/diamond/StoneDetail";
 import type { Facets } from "@/components/diamond/DiamondFilterPanel";
 
-export type { StockRow };
+export type { StockRow, CatalogSet };
 
 const GENERIC_DIAMOND_FAVICON =
   "data:image/svg+xml," +
@@ -19,19 +20,30 @@ const GENERIC_DIAMOND_FAVICON =
   );
 
 export default function DiamondCatalogViewer({
-  code, name, showPrice, showBranding, initialRows, total, facets,
+  code, name, showPrice, showBranding, initialRows, total, facets, sets,
 }: {
   code: string; name: string; showPrice: boolean; showBranding: boolean; initialRows: StockRow[]; total: number; facets: Facets;
+  /** A hand-picked catalog's matched sets — shown as a table tab beside the stone grid. */
+  sets?: CatalogSet[];
 }) {
+  const [view, setView] = useState<"stones" | "sets">("stones");
   useEffect(() => {
     document.title = showBranding ? `${name} — JeniDiam` : name;
-    const existing = document.querySelectorAll("link[rel~='icon']");
-    existing.forEach((el) => el.parentNode?.removeChild(el));
-    const link = document.createElement("link");
-    link.rel = "icon";
-    link.type = "image/svg+xml";
-    link.href = GENERIC_DIAMOND_FAVICON;
-    document.head.appendChild(link);
+    // Repoint existing icons rather than removing them: React owns those
+    // <link> nodes, and removing them under it breaks its later updates
+    // ("Cannot read properties of null (reading 'removeChild')").
+    const existing = document.querySelectorAll<HTMLLinkElement>("link[rel~='icon']");
+    existing.forEach((el) => {
+      el.type = "image/svg+xml";
+      el.href = GENERIC_DIAMOND_FAVICON;
+    });
+    if (!existing.length) {
+      const link = document.createElement("link");
+      link.rel = "icon";
+      link.type = "image/svg+xml";
+      link.href = GENERIC_DIAMOND_FAVICON;
+      document.head.appendChild(link);
+    }
   }, [name, showBranding]);
 
   return (
@@ -52,17 +64,45 @@ export default function DiamondCatalogViewer({
         </div>
       </header>
 
-      <DiamondExplorer
-        facetsUrl={`/api/diamonds/${code}/facets`}
-        searchUrl={`/api/diamonds/${code}`}
-        showPrice={showPrice}
-        showLocation={false}
-        showCertSearch={false}
-        heightClass="h-[calc(100vh-4.25rem)] sm:h-[calc(100vh-4.75rem)]"
-        initialRows={initialRows}
-        initialTotal={total}
-        initialFacets={facets}
-      />
+      {sets?.length ? (
+        <nav className="bg-surface border-b border-gray-200 px-4 sm:px-6 shrink-0">
+          <div className="max-w-[1600px] mx-auto flex gap-1">
+            {([["stones", `All stones (${total})`], ["sets", `Sets table (${sets.length})`]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setView(key)}
+                className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition ${
+                  view === key ? "border-[#3E86C6] text-[#3E86C6]" : "border-transparent text-gray-500 hover:text-ink"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      ) : null}
+
+      {view === "sets" && sets?.length ? (
+        <main className="flex-1">
+          <SetsTable sets={sets} name={name} showPrice={showPrice} />
+        </main>
+      ) : (
+        <DiamondExplorer
+          facetsUrl={`/api/diamonds/${code}/facets`}
+          searchUrl={`/api/diamonds/${code}`}
+          showPrice={showPrice}
+          showLocation={false}
+          showCertSearch={false}
+          heightClass={
+            sets?.length
+              ? "h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)]"
+              : "h-[calc(100vh-4.25rem)] sm:h-[calc(100vh-4.75rem)]"
+          }
+          initialRows={initialRows}
+          initialTotal={total}
+          initialFacets={facets}
+        />
+      )}
 
       {showBranding && (
         <footer className="py-3 text-center shrink-0 border-t border-gray-100 bg-surface">

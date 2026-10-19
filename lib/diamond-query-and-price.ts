@@ -6,7 +6,7 @@
 // for the browser, and pulling the query module (which drags in the
 // MongoDB driver, e.g. Node's `net`) into it breaks the client bundle.
 // Only import this file from server code (API routes).
-import { queryDiamondStock, queryDiamondStockScoped, type DiamondFilters, type DiamondSort } from "@/lib/diamond-stock-query";
+import { queryDiamondStock, queryDiamondStockScoped, type DiamondFilters, type DiamondSort, type PriceBasis } from "@/lib/diamond-stock-query";
 import type { PricedRow } from "@/lib/diamond-pricing";
 
 // Both sorts — carat and price — run in MongoDB: the price sort uses each
@@ -24,9 +24,9 @@ export async function queryAndPrice<T extends PricedRow>(
     sort: DiamondSort;
     page: number;
     pageSize: number;
-  }
+  } & PriceBasis
 ): Promise<{ rows: T[]; total: number }> {
-  const queryOpts = { page: opts.page, pageSize: opts.pageSize, sort: opts.sort };
+  const queryOpts = { page: opts.page, pageSize: opts.pageSize, sort: opts.sort, flatMarkupPercent: opts.flatMarkupPercent };
   const { rows, total } = opts.scopedTo
     ? await queryDiamondStockScoped(opts.scopedTo, opts.filters, queryOpts)
     : await queryDiamondStock(opts.filters, queryOpts);

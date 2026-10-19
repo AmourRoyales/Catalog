@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { priceLabGrownDiamond, withAdminPricing, withPublicPricing, PRICING_PROFILE } from "./diamond-pricing";
+import { catalogPricing, priceLabGrownDiamond, withAdminPricing, withFlatMarkup, withPublicPricing, PRICING_PROFILE } from "./diamond-pricing";
 
 // A "neutral" stone: H color, VS2 clarity, under 2ct — every adjustment is
 // 0, so the base markup tier is what's under test with nothing else moving.
@@ -236,5 +236,20 @@ describe("row-level pricing: admin vs. public", () => {
     const admin = withAdminPricing(zeroCarat);
     expect(admin.rate).toBe(admin.amount);
     expect(Number.isFinite(admin.rate)).toBe(true);
+  });
+});
+
+describe("withFlatMarkup", () => {
+  it("prices at cost plus the flat percent only, rounded to the dollar", () => {
+    const row = { rate: 1000, amount: 1234, carat: 1.234, color: "D", clarity: "FL" };
+    const p = withFlatMarkup(20)(row);
+    expect(p.amount).toBe(1481);
+    expect(p.rate).toBeCloseTo(1481 / 1.234);
+  });
+
+  it("catalogPricing falls back to the standard engine without a flat percent", () => {
+    const row = { rate: 100, amount: 100, carat: 1, color: "G", clarity: "VS2" };
+    expect(catalogPricing(null)(row)).toEqual(withPublicPricing(row));
+    expect(catalogPricing(20)(row).amount).toBe(120);
   });
 });

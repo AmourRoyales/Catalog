@@ -10,6 +10,7 @@ type DiamondCatalog = {
   name: string;
   filters: DiamondFilters;
   show_price: boolean;
+  flat_markup_percent?: number | null;
   status: string;
   created_at: string;
   matchCount: number;
@@ -17,8 +18,12 @@ type DiamondCatalog = {
 
 function filterSummary(f: DiamondFilters): string {
   const parts: string[] = [];
+  if (f.stoneIds) parts.push(`${f.stoneIds.length} picked stones`);
   if (f.shapes?.length) parts.push(f.shapes.join("/"));
-  if (f.caratMin != null || f.caratMax != null) parts.push(`${f.caratMin ?? "0"}-${f.caratMax ?? "∞"}ct`);
+  for (const r of f.shapeCaratRanges ?? []) parts.push(`${r.shape} ${r.caratMin ?? "0"}-${r.caratMax ?? "∞"}ct`);
+  if (f.caratMin != null || f.caratMax != null) {
+    parts.push(`${f.shapeCaratRanges?.length ? "others " : ""}${f.caratMin ?? "0"}-${f.caratMax ?? "∞"}ct`);
+  }
   if (f.colors?.length) parts.push(f.colors.join("/"));
   if (f.fancyHues?.length) parts.push(f.fancyHues.join("/"));
   if (!f.colors?.length && !f.fancyHues?.length && f.colorMode) parts.push(f.colorMode);
@@ -124,6 +129,7 @@ export default function DiamondCatalogsPage() {
                     ● {c.status === "active" ? "Active" : "Archived"}
                   </span>
                   {!c.show_price && <span>Price hidden</span>}
+                  {c.flat_markup_percent != null && <span>Flat +{c.flat_markup_percent}% over cost</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
