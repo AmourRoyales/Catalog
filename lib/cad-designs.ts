@@ -41,7 +41,7 @@ function withMensTag(code: string, tags: string[]): string[] {
   return tags.some((t) => t.toLowerCase() === MENS_TAG.toLowerCase()) ? tags : [...tags, MENS_TAG];
 }
 
-let cache: Partial<Record<CadDataset, CadDesign[]>> = {};
+const cache: Partial<Record<CadDataset, CadDesign[]>> = {};
 
 /**
  * Flattens the nested collection JSON into a flat array, dropping any
@@ -140,6 +140,7 @@ export function parseSearchQuery(query: string): string[][] {
 
 export function searchCadDesigns(opts: {
   category?: string;
+  categories?: string[];
   datasets: CadDataset[];
   search?: string;
   mode?: SearchMode;
@@ -148,7 +149,9 @@ export function searchCadDesigns(opts: {
   const all = opts.datasets.flatMap((d) => getAllCadDesigns(d));
 
   return all.filter((design) => {
-    if (opts.category && design.type !== opts.category) return false;
+    if (opts.categories?.length) {
+      if (!opts.categories.includes(design.type)) return false;
+    } else if (opts.category && design.type !== opts.category) return false;
     if (groups.length === 0) return true;
     const results = groups.map((phrases) => phrases.some((p) => tagsMatchTerm(design.tags, p)));
     return opts.mode === "OR" ? results.some(Boolean) : results.every(Boolean);

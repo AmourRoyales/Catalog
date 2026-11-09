@@ -1,5 +1,8 @@
 import { getDb } from "@/lib/mongo";
 import CadCatalogViewer from "./viewer";
+import { cadCatalogItemFilter } from "@/lib/cad-catalog";
+
+export const dynamic = "force-dynamic";
 
 export default async function PublicCadCatalogPage({ params }: { params: { code: string } }) {
   const db = await getDb();
@@ -37,7 +40,7 @@ export default async function PublicCadCatalogPage({ params }: { params: { code:
 
   const docs = await db
     .collection("cad_catalog_items")
-    .find({ catalog_id: catalog._id }, { projection })
+    .find(cadCatalogItemFilter(catalog), { projection })
     .sort({ display_order: 1 })
     .toArray();
   // Even with pricing on, ship only what the viewer shows — the final price

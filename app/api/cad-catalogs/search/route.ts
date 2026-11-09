@@ -50,6 +50,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const category: string | undefined = body.category || undefined;
+  const categories: string[] | undefined = Array.isArray(body.categories)
+    ? body.categories.filter((c: unknown): c is string => typeof c === "string")
+    : undefined;
   const datasets: CadDataset[] = Array.isArray(body.datasets)
     ? body.datasets.filter((d: string): d is CadDataset => VALID_DATASETS.includes(d as CadDataset))
     : VALID_DATASETS;
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
   const priceMax = optionalNumber(body.priceMax);
   const priceFiltered = withQuotes && !ids && (priceMin != null || priceMax != null);
 
-  if (datasets.length === 0 || metals.length === 0) {
+  if ((!ids && datasets.length === 0) || metals.length === 0) {
     return NextResponse.json({ items: [], total: 0, page, pageSize: PAGE_SIZE });
   }
 
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
   // Finder) in the given order instead of running a search.
   const matched = ids
     ? ids.map(getCadDesignById).filter((d): d is NonNullable<typeof d> => !!d)
-    : searchCadDesigns({ category, datasets, search, mode });
+    : searchCadDesigns({ category: categories ? undefined : category, categories, datasets, search, mode });
 
   const cachedLookupCertifiedRate: CertifiedLookup = memoize(
     lookupCertifiedRate,

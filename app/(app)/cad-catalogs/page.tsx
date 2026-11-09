@@ -83,7 +83,7 @@ export default function CadCatalogsPage() {
         <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center">
           <p className="text-gray-500 font-medium">No CAD catalogs yet.</p>
           <p className="text-sm text-gray-400 mt-1">
-            Pick a metal, a category and a markup, then share the priced list with anyone.
+            Pick metals, categories and a markup, then share the priced list with anyone.
           </p>
           <Link
             href="/cad-catalogs/new"
@@ -118,6 +118,12 @@ export default function CadCatalogsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href={`/cad-catalogs/${c.id}/edit`}
+                  className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition"
+                >
+                  Edit
+                </Link>
                 {c.status === "active" && (
                   <>
                     <a

@@ -24,6 +24,7 @@ async function ensureIndexes(db: Db) {
     db.collection("catalogues").createIndex({ share_token: 1 }, { unique: true }),
     db.collection("cad_catalogs").createIndex({ code: 1 }, { unique: true }),
     db.collection("cad_catalog_items").createIndex({ catalog_id: 1, display_order: 1 }),
+    db.collection("cad_catalog_items").createIndex({ catalog_id: 1, item_revision: 1, display_order: 1 }),
     db.collection("diamond_catalogs").createIndex({ code: 1 }, { unique: true }),
     db.collection("diamond_stock").createIndex({ shape: 1, carat: 1 }),
     db.collection("diamond_stock").createIndex({ batch_id: 1 }),
